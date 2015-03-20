@@ -287,7 +287,7 @@ namespace Etesian {
   {
   // Ugly: Name based detection of ISPD benchmarks.
     if (getString(getCell()->getName()).substr(0,7) == "bigblue") {
-      cmess1 << "  o  ISPD benchmark <" << getCell()->getName()
+      cmess2 << "  o  ISPD benchmark <" << getCell()->getName()
              << ">, no feed cells will be added." << endl;
     } else {
     // Ugly: Direct uses of Alliance Framework.
@@ -571,7 +571,7 @@ namespace Etesian {
 
       dots.dot();
 
-      nets[netId] = temporary_net( netId, 1000 );
+      nets[netId] = temporary_net( netId, 1 );
 
       forEach ( RoutingPad*, irp, (*inet)->getRoutingPads() ) {
         string insName = extractInstanceName( *irp );
@@ -624,7 +624,7 @@ namespace Etesian {
     Density       densityConf     = getSpreadingConf();
 
     cmess1 << "  o  Running Coloquinte." << endl;
-    cmess1 << "     - Computing initial placement..." << endl;
+    cmess2 << "     - Computing initial placement..." << endl;
     cmess2 << setfill('0') << right;
 
 
@@ -636,7 +636,7 @@ namespace Etesian {
     cmess2 << "  o  Initial wirelength " << get_HPWL_wirelength(_circuit, _placementLB) << "." <<  endl;
     startMeasures();
 
-    cmess1 << "  o  Simple legalization." << endl;
+    cmess2 << "  o  Simple legalization." << endl;
     auto first_legalizer = region_distribution::uniform_density_distribution(_surface, _circuit, _placementLB);
     first_legalizer.selfcheck();
     get_rough_legalization( _circuit, _placementUB, first_legalizer);
@@ -655,7 +655,7 @@ namespace Etesian {
         _updatePlacement( _placementUB );
 
     // Early topology-independent solution + negligible pulling forces to avoid dumb solutions
-    cmess1 << "  o  Star (*) Optimization." << endl;
+    cmess2 << "  o  Star (*) Optimization." << endl;
     auto solv = get_star_linear_system( _circuit, _placementLB, 1.0, 0, 10000)
               + get_pulling_forces( _circuit, _placementUB, 1000000.0);
     solve_linear_system( _circuit, _placementLB, solv, 200 );
@@ -664,7 +664,7 @@ namespace Etesian {
     if(placementUpdate <= LowerBound)
         _updatePlacement( _placementLB );
 
-    cmess1 << "  o  Simple legalization." << endl;
+    cmess2 << "  o  Simple legalization." << endl;
     auto snd_legalizer = region_distribution::uniform_density_distribution(_surface, _circuit, _placementLB);
     get_rough_legalization( _circuit, _placementUB, snd_legalizer);
 
@@ -762,7 +762,7 @@ namespace Etesian {
         ++i;
     }while(linearDisruption >= 0.5 * sliceHeight and currentDisruption <= 0.95);
 
-    cmess1 << "  o  Detailed Placement." << endl;
+    cmess2 << "  o  Detailed Placement." << endl;
     index_t detailedIterations;
     if(placementEffort == Fast)
         detailedIterations = 1;
@@ -795,13 +795,15 @@ namespace Etesian {
         if(placementUpdate <= LowerBound)
             _updatePlacement( _placementUB );
 
-        OSRP_convex_HPWL( _circuit, legalizer );
+        //OSRP_convex_HPWL( _circuit, legalizer );
+        OSRP_noncvx_HPWL( _circuit, legalizer );
         coloquinte::dp::get_result( _circuit, legalizer, _placementUB );
         _progressReport1( startTime, "          Row Optimization" );
         if(placementUpdate == UpdateAll)
             _updatePlacement( _placementUB );
 
-        swaps_row_convex_HPWL( _circuit, legalizer, 4 );
+        //swaps_row_convex_HPWL( _circuit, legalizer, 4 );
+        swaps_row_noncvx_HPWL( _circuit, legalizer, 4 );
         coloquinte::dp::get_result( _circuit, legalizer, _placementUB );
         _progressReport1( startTime, "          Local Swaps ...." );
         if(placementUpdate <= LowerBound)
@@ -817,7 +819,7 @@ namespace Etesian {
     }
     _updatePlacement( _placementUB );
 
-    cmess1 << "  o  Adding feed cells." << endl;
+    cmess2 << "  o  Adding feed cells." << endl;
     addFeeds();
 
     cmess1 << "  o  Placement finished." << endl;
