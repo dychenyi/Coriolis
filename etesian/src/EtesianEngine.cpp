@@ -455,7 +455,7 @@ namespace Etesian {
 
     if (_cellWidget) _cellWidget->refresh();
 
-    _placed = true;
+    _placed = false;
   }
 
 
@@ -624,6 +624,7 @@ namespace Etesian {
     Density       densityConf     = getSpreadingConf();
 
     cmess1 << "  o  Running Coloquinte." << endl;
+    cmess1 << "  o  Global placement." << endl;
     cmess2 << "     - Computing initial placement..." << endl;
     cmess2 << setfill('0') << right;
 
@@ -762,7 +763,7 @@ namespace Etesian {
         ++i;
     }while(linearDisruption >= 0.5 * sliceHeight and currentDisruption <= 0.95);
 
-    cmess2 << "  o  Detailed Placement." << endl;
+    cmess1 << "  o  Detailed Placement." << endl;
     index_t detailedIterations;
     if(placementEffort == Fast)
         detailedIterations = 1;
@@ -795,15 +796,15 @@ namespace Etesian {
         if(placementUpdate <= LowerBound)
             _updatePlacement( _placementUB );
 
-        //OSRP_convex_HPWL( _circuit, legalizer );
-        OSRP_noncvx_HPWL( _circuit, legalizer );
+        OSRP_convex_HPWL( _circuit, legalizer );
+        //OSRP_noncvx_RSMT( _circuit, legalizer );
         coloquinte::dp::get_result( _circuit, legalizer, _placementUB );
         _progressReport1( startTime, "          Row Optimization" );
         if(placementUpdate == UpdateAll)
             _updatePlacement( _placementUB );
 
-        //swaps_row_convex_HPWL( _circuit, legalizer, 4 );
-        swaps_row_noncvx_HPWL( _circuit, legalizer, 4 );
+        swaps_row_convex_HPWL( _circuit, legalizer, 4 );
+        //swaps_row_noncvx_RSMT( _circuit, legalizer, 4 );
         coloquinte::dp::get_result( _circuit, legalizer, _placementUB );
         _progressReport1( startTime, "          Local Swaps ...." );
         if(placementUpdate <= LowerBound)
@@ -830,7 +831,7 @@ namespace Etesian {
     cmess1 << ::Dots::asString
       ( "     - RMST", DbU::getValueString( (DbU::Unit)get_RSMT_wirelength(_circuit,_placementUB )*getPitch() ) ) << endl;
 
-    _placed = false;
+    _placed = true;
 #else
     cerr << Warning("Coloquinte library wasn't found, Etesian is disabled.") << endl;
 #endif
