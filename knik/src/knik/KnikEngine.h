@@ -132,6 +132,8 @@ typedef vector<NetRecord> NetVector;
         bool                 _useSegments;
         bool                 _routingDone;
         unsigned             _rerouteIteration;
+        unsigned             _congestion;
+        unsigned             _precongestion;
         map<Segment*,SegRecord>            _segmentOverEdges;
         vector<pair<Segment*,SegRecord*> > _sortSegmentOv;
         set<Segment*> _segmentsToUnroute;
@@ -151,13 +153,7 @@ typedef vector<NetRecord> NetVector;
 // Modifiers
 // *********
     private:
-        void     MakeRoutingLeaves();
         void     unroute ( Segment* segment, set<Segment*> &segmentsToUnroute, Contact* fromContact = NULL );
-//    private: unsigned getGeometry  ( Net* net, set<Vertex*,VertexPositionComp> &vertexes, Box &vertexCenterBoundingBox );
-//    private: void     RouteFlatNet ( Net* net, set<Vertex*,VertexPositionComp> vertexes, Box vertexCenterBoundingBox );
-//    private: void     RouteLNet    ( Net* net, set<Vertex*,VertexPositionComp> vertexes );
-//    private: void     RestructureNet ( Net* net );
-//    private: void     createLimitedZone ( Net* net, set<Vertex*,VertexPositionComp> gcells, Box vertexCenterBoundingBox, unsigned netStamp );
         string   adaptString ( string s );
   public:
     static void          setHEdgeReservedLocal   ( size_t reserved ) { _hEdgeReservedLocal = reserved; };
@@ -184,7 +180,6 @@ typedef vector<NetRecord> NetVector;
            bool          analyseRouting          ();
            void          unrouteOvSegments       ();
            void          reroute                 ();
-           void          unrouteSelected         ();
         // for ispd07 reload                     
            void          createRoutingGraph      ();
            void          addRoutingPadToGraph    ( Hurricane::RoutingPad* routingPad );

@@ -40,9 +40,6 @@ public:
 
 namespace Knik {
 
-extern unsigned __congestion__;
-extern unsigned __precongestion__;
-
   const Name Vertex::_extensionName = "Knik::Vertex";
 
 // ********************************************************************

@@ -59,11 +59,10 @@ namespace Knik {
 
 
 // Global Variables
-  unsigned int  __congestion__;
-  unsigned int  __precongestion__;
   float         __edge_cost__;
   bool          __initialized__;
-  
+  unsigned      __precongestion__;  
+  unsigned      __congestion__;  
   extern bool   __ripupMode__;
 
   const Name KnikEngine::_toolName           = "Knik::KnikEngine";
@@ -88,19 +87,21 @@ namespace Knik {
     , _useSegments     ( useSegments )
     , _routingDone     ( false )
     , _rerouteIteration( 0 )
+    , _congestion      ( congestion )
+    , _precongestion   ( precongestion )
     , _segmentOverEdges()                              
     , _sortSegmentOv   ()
   {
     if (congestion > 1)
       throw Error ( "KnikEngine::KnikEngine(): congestion argument must be 0 (None) or 1 (Congestion) : %s."
                   , getString(congestion).c_str() );
-    __congestion__    = congestion;
+    __congestion__   = congestion;
 
-    if ( precongestion > 2 )
+    if (precongestion > 2)
       throw Error ( "KnikEngine::KnikEngine():  precongestion argument must be 0 (None), 1 (Static) or 2 (Dynamic) : %s."
                   , getString(precongestion).c_str() );
+    __precongestion__   = precongestion;
 
-    __precongestion__ = precongestion;
     __edge_cost__     = edgeCost;
     __initialized__   = false;
   }
@@ -170,29 +171,6 @@ void KnikEngine::_preDestroy()
 
     _allowedDepth = (allowedDepth < _routingGauge->getDepth()) ? allowedDepth : _routingGauge->getDepth();
   }
-
-
-void KnikEngine::MakeRoutingLeaves()
-// *********************************
-{
-    //unsigned steps = getCell()->getAbutmentBox().getHeight() / DbU::lambda(50); // +o( mieux vaudrait recuperer le slice !
-    //if ( _nimbus->getDepth() < steps ) {
-    //    _nimbus->progress ( steps - _nimbus->getDepth() );
-    //    _nimbus->PlacementLeavesDown();
-    //}
-//    for_each_gcell(gcell, _nimbus->getPlacementLeaves()) {
-//        //if (_metisseLimit)  // dans un premier temps on se limite � respecter les placementLeaves (on ne descend pas en dessous)
-//        if (gcell->isAStrictSubGCellOf(gcell->getPlacementLeaf()))
-//            break;
-//        gcell->setAsRoutingLeaf();
-//        for_each_fence (fence, gcell->getSurroundingFences()) {
-//            fence->setAsRoutingFence();
-//            end_for;
-//        }
-//        end_for;
-//    }
-    return;
-}
 
 void KnikEngine::initGlobalRouting( const map<Name,Net*>& excludedNets )
 // *********************************************************************
@@ -483,97 +461,6 @@ void KnikEngine::getVerticalCutLines ( vector<DbU::Unit>& verticalCutLines )
 // *************************************************************************
 {
     _routingGraph->getVerticalCutLines ( verticalCutLines );
-}
-
-void KnikEngine::unrouteSelected()
-// *******************************
-{
-//     static const Layer* layerGAlu2 = NULL;
-//     static const Layer* layerGAlu3 = NULL;
-//     static const Layer* layerGCont = NULL;
-//     if ( !layerGAlu2 ) {
-//         Technology* technology = DataBase::getDB()->getTechnology();
-//         layerGAlu2 = technology->getLayer(Name("GALU2"));
-//         layerGAlu3 = technology->getLayer(Name("GALU3"));
-//         layerGCont = technology->getLayer(Name("GCONTACT"));
-//     }
-
-//     set<Segment*> segmentsToUnroute;
-//     CEditor* editor = getCEditor ( getCell() );
-//     if (editor->hasSomethingSelected() ) {
-//         for_each_selector ( selector, editor->getSelectors() ) {
-//             if ( Segment* segment = dynamic_cast<Segment*>(selector->getOccurrence().getEntity()) ) {
-//                 Layer* layer = segment->getLayer();
-//                 if ( (layer == layerGAlu2) || (layer == layerGAlu3) || (layer == layerGCont) ) {
-//                     //cerr << "segment " << segment << " passes " << _routingGraph->getCongestEdgeNb(segment) << endl;
-//                     segmentsToUnroute.insert ( segment );
-//                 }
-//             }
-//             end_for;
-//         }
-//     }
-    
-//     UpdateSession::open();
-//     // Previous call to recursive function
-//     //while ( !segmentsToUnroute.empty() ) {
-//     //    Segment* seg = (*segmentsToUnroute.begin());
-//     //    unroute ( seg, segmentsToUnroute );
-
-//     //}
-//     do {
-//         set<Contact*> contacts;
-//         while ( !segmentsToUnroute.empty() ) {  // on parcourt tous les segments a derouter
-//             Segment* segment = (*segmentsToUnroute.begin());
-//             if ( !dynamic_cast<Contact*>(segment->getSource()) )     throw Error ( "unroute segment : segment's source is not a contact !" );
-//             if ( !dynamic_cast<Contact*>(segment->getTarget()) )     throw Error ( "unroute segment : segment's target is not a contact !" );
-//             // on insere les contacts source et target dans le set
-//             contacts.insert ( static_cast<Contact*>(segment->getSource()) );
-//             contacts.insert ( static_cast<Contact*>(segment->getTarget()) );
-//             segmentsToUnroute.erase ( segment );  // suppression du segment dans le set
-//             _routingGraph->removeSegment ( segment ); // il faut mettre a jour les occupations des edges dans le graph !
-//             segment->getSourceHook()->detach();
-//             segment->getTargetHook()->detach();
-//             segment->destroy(); // delete du segment
-//         }
-//         for ( set<Contact*>::iterator cit = contacts.begin(); cit != contacts.end() ; cit++ ) { // pour chacun des contacts du set
-//             Contact* contact = (*cit);
-//             Vertex* contactVertex = _routingGraph->getVertex(contact->getCenter());
-//             Hook* contactHook = contact->getBodyHook();
-//             bool routingPadPresent = false;
-//             Hook* currentHook = contactHook->getNextHook();
-//             // on verifie si le contact est associe a un routingPad
-//             while ( currentHook != contactHook ) {
-//                 if ( dynamic_cast<RoutingPad*>(currentHook->getComponent()) ) {
-//                     RoutingPad* rp = static_cast<RoutingPad*>(currentHook->getComponent());
-//                     if ( _routingGraph->getVertex(rp->getCenter()) == contactVertex ) {
-//                         routingPadPresent = true;
-//                         break;
-//                     }
-//                 }
-//                 currentHook = currentHook->getNextHook();
-//             }
-//             // si le contact est associe a un routingPad, on passe au contact suivant
-//             if ( routingPadPresent ) continue;
-//             unsigned nbSegments = contact->getSlaveComponents().getSize();
-//             // sinon s'il a au moins 2 segments on passe au suivant aussi
-//             if ( nbSegments >= 2 ) continue;
-//             // sinon s'il n'a qu'un segment, on ajoutele segment au set des segments a derouter
-//             if ( nbSegments == 1 ) {
-//                 if ( !dynamic_cast<Segment*>(contact->getSlaveComponents().getFirst()) ) throw Error ("somthing else than a segment is on a contact ...");
-//                 segmentsToUnroute.insert(static_cast<Segment*>(contact->getSlaveComponents().getFirst()));
-//                 continue;
-//             }
-//             // sinon sile contact est "seul", on le delete, apres vérif tout de meme
-//             if ( nbSegments == 0 ) {
-//                 contactVertex->setContact( NULL ); // pour etre surqu'on ne pointe pas sur un objet efface
-//                 contact->destroy();
-//             }
-//         }
-//     } while ( !segmentsToUnroute.empty() );
-//     UpdateSession::close();
-
-//     editor->UnselectAll();
-//     editor->Refresh();
 }
 
 string KnikEngine::adaptString ( string s )
