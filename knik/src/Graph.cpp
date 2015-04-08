@@ -35,7 +35,6 @@
 
 #include "knik/flute.h"
 
-//#define __USE_SLICINGTREE__
 #define __USE_MATRIXVERTEX__
 
 #define EPSILON 10e-4
@@ -91,7 +90,6 @@ Graph::Graph ( KnikEngine* engine, RoutingGrid* routingGrid, bool benchMode, boo
     , _engine ( engine )
     , _benchMode ( benchMode )
     , _useSegments ( useSegments )
-    , _slicingTree ( NULL )
     , _matrixVertex ( NULL )
     , _routingGrid ( routingGrid )
     , _working_net ( NULL )
@@ -319,9 +317,6 @@ void Graph::_preDestroy()
     #ifdef __USE_MATRIXVERTEX__
         _matrixVertex->destroy();
     #endif
-    #ifdef __USE_SLICINGTREE__
-        _slicingTree->destroy();
-    #endif
 }
 
 Vertex* Graph::getPredecessor ( const Vertex* vertex )
@@ -371,15 +366,6 @@ Vertex* Graph::getVertex ( Point p )
     #ifdef __USE_MATRIXVERTEX__
         vertex = _matrixVertex->getVertex(p);
         assert(vertex);
-    #endif
-    #ifdef __USE_SLICINGTREE__
-        vertex = _slicingTree->getVertex ( p );
-        assert ( vertex );
-    //#else   // Ce n'est plus une option !
-    //    GCell* gcell =  _nimbus->getRoutingLeafContaining ( p );
-    //    assert ( gcell );
-    //    vertex = getVertexOfGCell ( gcell );
-    //    assert ( vertex );
     #endif
 
     return vertex;
@@ -2644,7 +2630,6 @@ Record* Graph::_getRecord() const
     Record* record = new Record ( getString ( this ) );
 
     record->add ( getSlot ( "LowerLeftVertex", _lowerLeftVertex ) );
-//    record->add ( getSlot ( "SlicingTree"    , _slicingTree ) );
     record->add ( getSlot ( "WorkingNet"     , _working_net ) );
     record->add ( getSlot ( "SearchingArea"  , _searchingArea ) );
     record->add ( getSlot ( "xSize"          , _xSize ) );

@@ -19,8 +19,6 @@
                                        knik/VEdge.h
                                        knik/MatrixVertex.h
                                        knik/RoutingGrid.h
-                                       knik/SlicingTree.h
-                                       knik/SlicingTreeNode.h
                                        knik/Graph.h
                                        knik/NetExtension.h
                                        knik/KnikEngine.h
@@ -33,7 +31,6 @@
                                        VEdge.cpp
                                        MatrixVertex.cpp
                                        Graph.cpp
-                                       SlicingTree.cpp
                                        NetExtension.cpp
                                        LoadSolution.cpp
                                        KnikEngine.cpp

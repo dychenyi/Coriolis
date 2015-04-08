@@ -25,7 +25,6 @@
 #include "knik/MatrixVertex.h"
 #include "knik/VTuple.h"
 #include "knik/STuple.h"
-#include "knik/SlicingTree.h"
 #include "knik/RoutingGrid.h"
 
 struct FTree;
@@ -70,7 +69,6 @@ namespace Knik {
                 KnikEngine*         _engine;
                 bool                _benchMode;
                 bool                _useSegments;
-                SlicingTree*        _slicingTree;
                 MatrixVertex*       _matrixVertex;
                 RoutingGrid*        _routingGrid;
                 Net*                _working_net;
