@@ -41,6 +41,7 @@
 #include "hurricane/viewer/CellWidget.h"
 #include "katabatic/GCellGrid.h"
 #include "katabatic/KatabaticEngine.h"
+#include "kite/KiteEngine.h"
 #include "crlcore/Utilities.h"
 #include "crlcore/Measures.h"
 #include "crlcore/AllianceFramework.h"
@@ -794,6 +795,7 @@ namespace Etesian {
           _progressReport1("          Final Legalize ." );
         }
     }
+    _placementLB = _placementUB; // In case we run other passes
     _updatePlacement( _placementUB );
   }
 
@@ -867,6 +869,30 @@ namespace Etesian {
     globalPlace(minPenaltyIncrease, sliceHeight, targetImprovement, minPenaltyIncrease, maxPenaltyIncrease, globalOptions);
 
     cmess1 << "  o  Detailed Placement." << endl;
+    detailedPlace(detailedIterations, detailedEffort, detailedOptions);
+
+    using namespace Kite;
+    KiteEngine* kiteE = KiteEngine::create(_cell);
+    kiteE->runGlobalRouter(0);
+    kiteE->balanceGlobalDensity();
+    kiteE->layerAssign(Katabatic::EngineLayerAssignByTrunk);
+    kiteE->runNegociate();
+    feedRoutingBack();
+    kiteE->destroy();
+
+    forEach(Net*, inet, _cell->getNets()){
+      if(NetRoutingExtension::isManualGlobalRoute(*inet))
+        continue;
+      std::vector<Contact*> pointers;
+      forEach(Component*, icom, (*inet)->getComponents()){
+        Contact * contact = dynamic_cast<Contact*>(*icom);
+        if(contact){
+          pointers.push_back(contact);
+        }
+      }
+      for(Contact* contact : pointers)
+        contact->destroy();
+    }
     detailedPlace(detailedIterations, detailedEffort, detailedOptions);
 
     cmess2 << "  o  Adding feed cells." << endl;
