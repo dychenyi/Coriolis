@@ -68,7 +68,7 @@ def rsave ( cell, depth=0 ):
 
 def unicornHook ( **kw ):
     plugins.kwUnicornHook( 'plugins.rsave'
-                         , 'R-Save Cell'
+                         , 'R-Save Cell (layout)'
                          , 'Recursively Save Top Cell and it\'s Instances'
                          , sys.modules[__name__].__file__
                          , **kw

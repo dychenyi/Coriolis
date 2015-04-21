@@ -37,6 +37,7 @@ class Builder:
         self._clang            = False
         self._devtoolset2      = False
         self._qt5              = False
+        self._openmp           = False
         self._enableShared     = "ON"
         self._enableDoc        = "OFF"
         self._checkDatabase    = "OFF"
@@ -62,6 +63,7 @@ class Builder:
         elif attribute == "clang":            self._clang            = value
         elif attribute == "devtoolset2":      self._devtoolset2      = value
         elif attribute == "qt5":              self._qt5              = value
+        elif attribute == "openmp":           self._openmp           = value
         elif attribute == "enableDoc":        self._enableDoc        = value
         elif attribute == "enableShared":     self._enableShared     = value
         elif attribute == "checkDatabase":    self._checkDatabase    = value
@@ -82,44 +84,33 @@ class Builder:
         return self.__dict__[attribute]
 
 
-   #def _guessGitHash ( self, project ):
-   #    revisionPattern = re.compile ( r"^Revision:\s*(?P<revision>\d+)" )
-   #    projectSvnDir   = os.path.join ( self.svnMethod+project.getRepository() )
-   #
-   #    os.chdir(  )
-   #    command = [ 'git', 'log', '--pretty="%h"', '-n', '1']
-   #    svnInfo = subprocess.Popen ( command, stdout=subprocess.PIPE )
-   #
-   #    for line in svnInfo.stdout.readlines():
-   #        m = revisionPattern.match ( line )
-   #        if m:
-   #            self.gitHash = m.group("revision")
-   #            print "Latest revision of project %s is %s." % (project.getName(),self.gitHash)
-   #            return
-   #
-   #    print "[WARNING] Cannot guess revision for project \"%s\"." % project.getName() 
-   #    print "          (using: \"x\")"
-   #    return
+    def _guessGitHash ( self, project ):
+        self.gitHash = 'x'
+        os.chdir ( self.sourceDir+'/'+project.getName() )
+        command = [ 'git', 'log', '--pretty=format:%h', '-n', '1']
+        self.gitHash = subprocess.Popen ( command, stdout=subprocess.PIPE ).stdout.readlines()[0]
+        return
 
 
-    def _configure ( self, fileIn, file ):
-        fdFileIn = open ( fileIn, "r" )
-        fdFile   = open ( file  , "w" )
+    def _configure ( self, fileIn, fileOut ):
+        fdFileIn  = open ( fileIn , "r" )
+        fdFileOut = open ( fileOut, "w" )
 
         for line in fdFileIn.readlines():
             stable       = False
             substituted0 = line
 
             while not stable:
-                substituted1 = re.sub ( r"@svntag@"     , self.gitHash, substituted0 )
-                substituted1 = re.sub ( r"@coriolisTop@", "/opt/coriolis2" , substituted1 )
+                substituted1 = re.sub ( r"@revdate@"    , self.revDate, substituted0 )
+                substituted1 = re.sub ( r"@githash@"    , self.gitHash, substituted1 )
+                substituted1 = re.sub ( r"@coriolisTop@", "/usr"      , substituted1 )
                 if substituted0 == substituted1: stable = True
                 else: substituted0 = substituted1
 
-            fdFile.write ( substituted0 )
+            fdFileOut.write ( substituted0 )
 
         fdFileIn.close ()
-        fdFile.close ()
+        fdFileOut.close ()
         return
 
 
@@ -139,9 +130,11 @@ class Builder:
             commandAsString = ''
             for i in range(len(command)):
                 if i: commandAsString += ' '
-                commandAsString += command[i]
+                if ' ' in command[i]: commandAsString += '"'+command[i]+'"'
+                else:                 commandAsString += command[i]
             command = [ 'scl', 'enable', 'devtoolset-2', commandAsString ]
 
+       #print command
         sys.stdout.flush ()
         sys.stderr.flush ()
         child = subprocess.Popen ( command, env=self._environment, stdout=None )
@@ -175,6 +168,7 @@ class Builder:
         if self._ninja:       command += [ "-G", "Ninja" ]
         if self._devtoolset2: command += [ "-D", "Boost_NO_SYSTEM_PATHS:STRING=TRUE" ]
         if self._qt5:         command += [ "-D", "WITH_QT5:STRING=TRUE" ]
+        if self._openmp:      command += [ "-D", "WITH_OPENMP:STRING=TRUE" ]
 
         command += [ "-D", "CMAKE_BUILD_TYPE:STRING=%s"  % self.buildMode
                    , "-D", "BUILD_SHARED_LIBS:STRING=%s" % self.enableShared
@@ -220,108 +214,58 @@ class Builder:
         return
 
 
-   #def _svnStatus ( self, tool ):
-   #    toolSourceDir = os.path.join ( self.sourceDir , tool )
-   #    if not os.path.isdir(toolSourceDir):
-   #        if not self._quiet:
-   #            print ErrorMessage( 0, "Missing tool source directory: \"%s\" (skipped)."%toolSourceDir )
-   #        return
-   #    os.chdir ( toolSourceDir )
+    def gitArchive ( self, projectName ):
+        rawArchive = self.tarballDir+'/'+projectName+'.tar'
+
+        os.chdir ( self.sourceDir+'/'+projectName )
+        command = [ 'git'
+                  , 'archive'
+                  , '--prefix=%s/' % projectName
+                  , '--output=%s'  % rawArchive
+                  , 'devel'
+                  ]
+        self._execute ( command, "git archive of project %s" % projectName )
+
+        if not os.path.isdir ( self.archiveDir ):
+            os.mkdir ( self.archiveDir )
+
+        os.chdir ( self.archiveDir )
+        command = [ 'tar', 'xf', rawArchive ]
+        self._execute ( command, "unpacking raw archive %s" % rawArchive )
+
+        command = [ 'rm', rawArchive ]
+        self._execute ( command, "Removing raw archive %s" % rawArchive )
+
+       # Adds files neededs only for packaging purpose.
+        command = [ "/bin/ln", "-s", "./coriolis/bootstrap/Makefile.package"
+                                   , self.archiveDir+"/Makefile" ]
+        self._execute ( command, "link of %s failed" % "coriolis/boostrap/Makefile.package")
+    
+        command = [ "/bin/ln", "-s", "./coriolis/bootstrap/debian", self.archiveDir ]
+        self._execute ( command, "Copying Debian/Ubuntu package control files" )
+
+   #   # Remove unpublisheds (yet) tools/files.
+   #    for item in self.packageExcludes:
+   #        command = [ "/bin/rm", "-rf", os.path.join(self.archiveDir,item) ]
+   #        self._execute ( command, "rm of %s failed" % item)
    #
-   #    print "Checking SVN status of tool: ", tool
-   #    command = [ "svn", "status", "-u", "-q" ]
-   #    self._execute ( command, "svn status -u -q" )
-   #    print
-   #    return
+   #   # Adds files neededs only for packaging purpose.
+   #    command = [ "/bin/cp", "-r", os.path.join(self.sourceDir ,"bootstrap","Makefile.package")
+   #                               , os.path.join(self.archiveDir,"Makefile") ]
+   #    self._execute ( command, "copy of %s failed" % "boostrap/Makefile.package")
    #
-   #
-   #def _svnDiff ( self, tool ):
-   #    toolSourceDir = os.path.join ( self.sourceDir , tool )
-   #    if not os.path.isdir(toolSourceDir):
-   #        if not self._quiet:
-   #            print ErrorMessage( 0, "Missing tool source directory: \"%s\" (skipped)."%toolSourceDir )
-   #        return
-   #    os.chdir ( toolSourceDir )
-   #
-   #    print "Doing a SVN diff of tool: ", tool
-   #    command = [ "svn", "diff" ]
-   #    if self.gitHash != "x":
-   #        command += [ "--revision", self.gitHash ]
-   #    self._execute ( command, "svn diff %s" % tool )
-   #    print
-   #    return
-   #
-   #
-   #def _svnUpdate ( self, tool ):
-   #    toolSourceDir = os.path.join ( self.sourceDir , tool )
-   #    if not os.path.isdir(toolSourceDir):
-   #        if not self._quiet:
-   #            print ErrorMessage( 0, "Missing tool source directory: \"%s\" (skipped)."%toolSourceDir)
-   #        return
-   #    os.chdir ( toolSourceDir )
-   #
-   #    print "Doing a SVN update of tool: ", tool
-   #    command = [ "svn", "update" ]
-   #    self._execute ( command, "svn update" )
-   #    print
-   #    return
-   #
-   #
-   #def _svnCheckout ( self, tool ):
-   #    project = self._conf.getToolProject ( tool )
-   #    if not project:
-   #        print ErrorMessage( 0, "Tool \"%s\" is not part of any project."%tool
-   #                             ,"Cannot guess the SVN repository." )
-   #        return
-   #    if not project.getRepository ():
-   #        print ErrorMessage( 0, "Project \"%s\" isn't associated to a repository."%project.getName() )
-   #        return
-   #
-   #    if not os.path.isdir(self.sourceDir):
-   #        print ErrorMessage( 0, "Source directory <%s> doesn't exists. Creating."%self.sourceDir )
-   #        os.makedirs( self.sourceDir )
-   #    
-   #    toolSvnTrunkDir = os.path.join ( self.svnMethod+project.getRepository(), tool, "trunk" )
-   #    os.chdir ( self.sourceDir )
-   #
-   #    print "Doing a SVN checkout of tool: ", tool
-   #    command = [ "svn", "co", toolSvnTrunkDir, tool ]
-   #    if self.gitHash != "x":
-   #        command += [ "--revision", self.gitHash ]
-   #    self._execute ( command, "svn checkout %s" % tool )
-   #    print
-   #    return
-   #
-   #
-   #def _svnExport ( self, tool ):
-   #    project = self._conf.getToolProject ( tool )
-   #    if not project:
-   #        print ErrorMessage( 0, "Tool \"%s\" is not part of any project."%tool
-   #                             , "Cannot guess the SVN repository.")
-   #        return
-   #    if not project.getRepository ():
-   #        print ErrorMessage( 0, "Project \"%s\" isn't associated to a repository."%project.getName() )
-   #        return
-   #    
-   #    toolSvnTrunkDir = os.path.join ( self.svnMethod+project.getRepository(), tool, "trunk" )
-   #
-   #    if not os.path.isdir ( self.archiveDir ):
-   #        os.mkdir ( self.archiveDir )
    #    os.chdir ( self.archiveDir )
-   #
-   #    toolExportDir = os.path.join ( self.archiveDir, tool )
-   #    if os.path.isdir ( toolExportDir ):
-   #        print "Removing tool export (tarball) directory: \"%s\"." % toolExportDir
-   #        command = [ "/bin/rm", "-r", toolExportDir ]
-   #        self._execute ( command, "Removing tool export (tarball) directory" )
-   #
-   #    print "Doing a SVN export of tool: ", tool
-   #    command = [ "svn", "export", toolSvnTrunkDir, toolExportDir ]
-   #    if self.gitHash != "x":
-   #        command += [ "--revision", self.gitHash ]
-   #    self._execute ( command, "svn export %s" % toolExportDir )
-   #    print
-   #    return
+   #    command = [ "/usr/bin/patch", "--remove-empty-files"
+   #                                , "--no-backup-if-mismatch"
+   #                                , "-p0", "-i", self.distribPatch ]
+   #    self._execute ( command, "patch for distribution command failed" )
+        
+        absSourceTarBz2 = '%s/%s' % (self.tarballDir,self.sourceTarBz2)
+        os.chdir ( self.tarballDir )
+        command = [ 'tar', 'jcf', absSourceTarBz2, os.path.basename(self.archiveDir) ]
+        self._execute ( command, "Creating composite archive %s" % absSourceTarBz2 )
+
+        return
 
 
     def _setEnvironment ( self, systemVariable, userVariable ):
@@ -398,81 +342,23 @@ class Builder:
         return
 
 
-   #def svnStatus ( self, tools, projects ):
-   #    self._commandTemplate ( tools, projects, "_svnStatus" )
-   #    return
-   #
-   #
-   #def svnUpdate ( self, tools, projects ):
-   #    self._commandTemplate ( tools, projects, "_svnUpdate" )
-   #    return
-   #
-   #
-   #def svnCheckout ( self, tools, projects ):
-   #    self._commandTemplate ( tools, projects, "_svnCheckout" )
-   #    return
-   #
-   #
-   #def svnDiff ( self, tools, projects ):
-   #    self._commandTemplate ( tools, projects, "_svnDiff" )
-   #    return
-   #
-   #
-   #def svnExport ( self, tools, projects ):
-   #    self._commandTemplate ( tools, projects, "_svnExport" )
-   #    return
-   #
-   #
-   #def svnTarball ( self, tools, projects ):
-   #    if self.gitHash == "x":
-   #        self._guessGitHash ( self.getProject(projects[0]) )
-   #
-   #    self._doSpec ()
+    def gitTarball ( self, tools, projects ):
+        if self.gitHash == "x":
+            self._guessGitHash ( self.getProject(projects[0]) )
+
+        self._doSpec ()
    #    self._doDebChangelog ()
-   #    
-   #    if os.path.isdir(self.tarballDir):
-   #        print "Removing previous tarball directory: \"%s\"." % self.tarballDir
-   #        command = [ "/bin/rm", "-rf", self.tarballDir ]
-   #        self._execute ( command, "Removing top export (tarball) directory" )
-   #
-   #    print "Creating tarball directory: \"%s\"." % self.tarballDir
-   #    os.makedirs ( self.tarballDir )
-   #    self.svnExport ( tools, projects )
-   #
-   #   # Remove unpublisheds (yet) tools/files.
-   #    for item in self.packageExcludes:
-   #        command = [ "/bin/rm", "-rf", os.path.join(self.archiveDir,item) ]
-   #        self._execute ( command, "rm of %s failed" % item)
-   #
-   #   # Adds files neededs only for packaging purpose.
-   #    command = [ "/bin/cp", "-r", os.path.join(self.sourceDir ,"bootstrap","Makefile.package")
-   #                               , os.path.join(self.archiveDir,"Makefile") ]
-   #    self._execute ( command, "copy of %s failed" % "boostrap/Makefile.package")
-   #
-   #    command = [ "/bin/cp", self.specFile, self.archiveDir ]
-   #    self._execute ( command, "Copying RPM spec file" )
-   #
-   #    command = [ "/bin/cp", "-r", self.debianDir, self.archiveDir ]
-   #    self._execute ( command, "Copying Debian/Ubuntu package control files" )
-   #
-   #    os.chdir ( self.archiveDir )
-   #   #command = [ "/usr/bin/patch", "--remove-empty-files"
-   #   #                            , "--no-backup-if-mismatch"
-   #   #                            , "-p0", "-i", self.distribPatch ]
-   #   #self._execute ( command, "patch for distribution command failed" )
-   #
-   #    os.chdir ( self.tarballDir )
-   #    command = [ "/bin/tar"
-   #              , "--exclude-backups"
-   #              , "--exclude-vcs"
-   #              , "-jcvf", self.sourceTarBz2, os.path.basename(self.archiveDir) ]
-   #    self._execute ( command, "tar command failed" )
-   #
-   #    print "Cleanup SVN export tarball archive directory: \"%s\"." % self.archiveDir
-   #    command = [ "/bin/rm", "-rf", self.archiveDir ]
-   #    self._execute ( command, "Removing archive export (tarball) directory" )
-   #
-   #    return
+
+        if os.path.isdir(self.tarballDir):
+            print "Removing previous tarball directory: \"%s\"." % self.tarballDir
+            command = [ "/bin/rm", "-rf", self.tarballDir ]
+            self._execute ( command, "Removing top export (tarball) directory" )
+
+        print "Creating tarball directory: \"%s\"." % self.tarballDir
+        os.makedirs ( self.tarballDir )
+        self.gitArchive ( projects[0] )
+
+        return
 
 
     def userTarball ( self, tools, projects ):
@@ -501,32 +387,43 @@ class Builder:
 
 
     def doRpm ( self ):
-        self.svnTarball ( [], self.packageProjects )
+        self.gitTarball ( [], self.packageProjects )
 
         for rpmDir in [ "SOURCES", "SPECS", "BUILD", "tmp"
                       , "SRPMS", "RPMS/i386", "RPMS/i686", "RPMS/x86_64" ]:
-            rpmFullDir = os.path.join ( self.rpmbuildDir, rpmDir )
-            if not os.path.isdir(rpmFullDir):
-                os.makedirs ( rpmFullDir )
+          rpmFullDir = os.path.join ( self.rpmbuildDir, rpmDir )
+          if not os.path.isdir(rpmFullDir):
+            os.makedirs ( rpmFullDir )
+          else:
+            for entry in os.listdir(rpmFullDir):
+              path = os.path.join( rpmFullDir, entry )
+              if os.path.islink(path):
+                realpath = os.path.realpath( os.readlink(path) )
+                if not os.path.isfile(realpath):
+                  print 'Remove obsolete link: <%s>.' % path
+                  os.unlink( path )
 
-       #rpmSpecFile   = os.path.join ( self.rpmbuildDir, "SPECS"  , "coriolis2.spec" )
+        rpmSpecFile   = os.path.join ( self.rpmbuildDir, "SPECS"  , "coriolis2.spec" )
         rpmSourceFile = os.path.join ( self.rpmbuildDir, "SOURCES", self.sourceTarBz2 )
-        sourceFile    = os.path.join ( self.tarballDir, self.sourceTarBz2 )
-
-       #if os.path.isfile ( rpmSpecFile ):
-       #    os.unlink ( rpmSpecFile )
-       #os.symlink ( self.specFile, rpmSpecFile   )
-
+        sourceFile    = os.path.join ( self.tarballDir , self.sourceTarBz2 )
+ 
+        if os.path.isfile ( rpmSpecFile ):
+            os.unlink ( rpmSpecFile )
+        os.symlink ( self.specFile, rpmSpecFile   )
+ 
         if not os.path.islink ( rpmSourceFile ):
             os.symlink ( sourceFile, rpmSourceFile )
 
         os.chdir ( self.rpmbuildDir )
-
+ 
         command = [ "/usr/bin/rpmbuild"
                   , "--define", "_topdir                 %s" % self.rpmbuildDir
                   , "--define", "_tmppath                %s" % self.tmppathDir
-                  , "--define", "_enable_debug_packages  0"
-                  , "-ta", "--with", "binarytar", rpmSourceFile ]
+                 #, "--define", "_enable_debug_packages  0"
+                  , "--with", "binarytar" ]
+        if self._devtoolset2 == True:
+            command += [ "--define", "scl devtoolset-2" ]
+        command += [ "-ba", "--clean", rpmSpecFile ]
 
         self._execute ( command, "Rebuild rpm packages" )
 

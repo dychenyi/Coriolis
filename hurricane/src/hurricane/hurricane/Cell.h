@@ -42,6 +42,7 @@
 //#include "hurricane/IntrusiveMap.h"
 #include "hurricane/IntrusiveSet.h"
 #include "hurricane/MapCollection.h"
+#include "hurricane/NetAlias.h"
 
 
 
@@ -75,6 +76,8 @@ class Cell : public Entity {
                       , CellChanged             = 0x0002
                       // Cell states
                       , FlattenedNets           = 0x0001
+                      , Placed                  = 0x0002
+                      , Routed                  = 0x0004
                       };
     public: typedef Entity Inherit;
     public: typedef map<Name,ExtensionSlice*> ExtensionSliceMap;
@@ -182,6 +185,7 @@ class Cell : public Entity {
     private: Cell* _nextOfLibraryCellMap;
     private: Cell* _nextOfSymbolCellSet;
     private: SlaveEntityMap _slaveEntityMap;
+    private: AliasNameSet _netAliasSet;
     private: Observable _observers;
     private: unsigned int _flags;
 
@@ -211,9 +215,13 @@ class Cell : public Entity {
     public: MarkerSet& _getMarkerSet() {return _markerSet;};
     public: Cell* _getNextOfLibraryCellMap() const {return _nextOfLibraryCellMap;};
     public: Cell* _getNextOfSymbolCellSet() const {return _nextOfSymbolCellSet;};
+    public: AliasNameSet& _getNetAliasSet() { return _netAliasSet; }
 
     public: void _setNextOfLibraryCellMap(Cell* cell) {_nextOfLibraryCellMap = cell;};
     public: void _setNextOfSymbolCellSet(Cell* cell) {_nextOfSymbolCellSet = cell;};
+
+    public: void _addNetAlias(NetAliasName* alias) { _netAliasSet.insert(alias); }
+    public: void _removeNetAlias(NetAliasName* alias) { _netAliasSet.erase(alias); }
 
     public: void _fit(const Box& box);
     public: void _unfit(const Box& box);
@@ -257,7 +265,7 @@ class Cell : public Entity {
     public: Instances getLeafInstancesUnder(const Box& area) const;
     public: Instances getNonLeafInstances() const;
     public: Instances getNonLeafInstancesUnder(const Box& area) const;
-    public: Net* getNet(const Name& name) const {return _netMap.getElement(name);};
+    public: Net* getNet(const Name& name) const;
     public: DeepNet* getDeepNet( Path, const Net* ) const;
     public: Nets getNets() const {return _netMap.getElements();};
     public: Nets getGlobalNets() const;
@@ -309,6 +317,9 @@ class Cell : public Entity {
     public: bool isLeaf() const;
     public: bool isPad() const {return _isPad;};
     public: bool isFlattenedNets() const {return _flags & FlattenedNets;};
+    public: bool isPlaced() const {return _flags & Placed;};
+    public: bool isRouted() const {return _flags & Routed;};
+    public: bool isNetAlias(const Name& name) const;
 
 // Updators
 // ********
@@ -319,6 +330,8 @@ class Cell : public Entity {
     public: void setFlattenLeaf(bool isFlattenLeaf) {_isFlattenLeaf = isFlattenLeaf;};
     public: void setPad(bool isPad) {_isPad = isPad;};
     public: void flattenNets(unsigned int flags=BuildRings);
+    public: void setFlags(unsigned int flags) { _flags |= flags; }
+    public: void resetFlags(unsigned int flags) { _flags &= ~flags; }
     public: void materialize();
     public: void unmaterialize();
     public: void addObserver(BaseObserver*);
