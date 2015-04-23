@@ -2,8 +2,10 @@
 
 #              include( ${QT_USE_FILE} )
    include_directories( ${SPAGHETTI_SOURCE_DIR}/src
+                        ${HURRICANE_INCLUDE_DIR}
                       )
                    set( includes      spaghetti/Graph.h
+                                      spaghetti/UnionFindMap.h
                       )               
                    set( cpps          Route.cpp
                       )

@@ -47,12 +47,13 @@ class Graph{
 
     protected:
     bool isRouted( Net const & n ) const;
+    std::vector<std::vector<VertexIndex> > getConnectedComponents( Net const & n ) const;
 
     void unrouteUnusedEdges ( Net & n );
     void unrouteSimplePaths ( Net & n );
 
-    void biroute  ( EdgeCostFunction, VertexCostFunction, Net & n );
-    void triroute ( EdgeCostFunction, VertexCostFunction, Net & n );
+    void biroute  ( EdgeCostFunction, Net & n );
+    void triroute ( EdgeCostFunction, Net & n );
 
     struct NeighbourAccess{
         EdgeIndex edge;

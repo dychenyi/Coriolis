@@ -13,6 +13,8 @@
  
  set_cmake_policies()
  set_lib_link_mode()
+
+ find_package(HURRICANE          REQUIRED)
  
  add_subdirectory(src)
  add_subdirectory(cmake_modules)
