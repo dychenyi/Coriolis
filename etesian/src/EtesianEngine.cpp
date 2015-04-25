@@ -587,6 +587,7 @@ namespace Etesian {
 
   void  EtesianEngine::preplace (){
     using namespace coloquinte::gp;
+
     // Perform a very quick legalization pass
     cmess2 << "  o  Simple legalization." << endl;
     auto first_legalizer = region_distribution::uniform_density_distribution(_surface, _circuit, _placementLB);
@@ -693,7 +694,7 @@ namespace Etesian {
       _progressReport1(label.str() );
 
       upperWL = static_cast<float_t>(get_HPWL_wirelength(_circuit, _placementUB));
-      float_t legRatio = lowerWL / upperWL;
+    //float_t legRatio = lowerWL / upperWL;
 
       // Get the system to optimize (tolerance, maximum and minimum pin counts)
       // and the pulling forces (threshold distance)
@@ -802,6 +803,8 @@ namespace Etesian {
 
   void  EtesianEngine::place ()
   {
+    getCell()->uniquify();
+
     getConfiguration()->print( getCell() );
     if (getCell()->getAbutmentBox().isEmpty()) setDefaultAb();
 
@@ -818,7 +821,7 @@ namespace Etesian {
 
     cmess1 << "  o  Running Coloquinte." << endl;
     cmess2 << "     - Computing initial placement..." << endl;
-    cmess2 << setfill('0') << right;
+    cmess2 << right;
 
     preplace();
 
@@ -927,12 +930,12 @@ namespace Etesian {
     //elapsed << "  dTime:" << setw(5) << _timer.getCombTime() << "s ";
 
     cmess2 << label << elapsed.str()
-           << " HPWL:" << coloquinte::gp::get_HPWL_wirelength( _circuit, _placementUB )
-           << " RMST:" << coloquinte::gp::get_RSMT_wirelength( _circuit, _placementUB )
+           << " HPWL:" << setw(11) << coloquinte::gp::get_HPWL_wirelength( _circuit, _placementUB )
+           << " RMST:" << setw(11) << coloquinte::gp::get_RSMT_wirelength( _circuit, _placementUB )
            << endl;
     cparanoid << indent
-           <<  "  Linear Disrupt.:" << coloquinte::gp::get_mean_linear_disruption   ( _circuit, _placementLB, _placementUB )
-           <<   " Quad Disrupt.:"   << coloquinte::gp::get_mean_quadratic_disruption( _circuit, _placementLB, _placementUB )
+           <<  "  Linear Disrupt.:" << setw(11) << coloquinte::gp::get_mean_linear_disruption   ( _circuit, _placementLB, _placementUB )
+           <<   " Quad Disrupt.:"   << setw(11) << coloquinte::gp::get_mean_quadratic_disruption( _circuit, _placementLB, _placementUB )
            << endl;
   }
 
@@ -950,8 +953,8 @@ namespace Etesian {
     //elapsed << "  dTime:" << setw(5) << _timer.getCombTime() << "s ";
 
     cmess2 << label << elapsed.str()
-           << " HPWL:" << coloquinte::gp::get_HPWL_wirelength( _circuit, _placementLB )
-           << " RMST:" << coloquinte::gp::get_RSMT_wirelength( _circuit, _placementLB )
+           << " HPWL:" << setw(11) << coloquinte::gp::get_HPWL_wirelength( _circuit, _placementLB )
+           << " RMST:" << setw(11) << coloquinte::gp::get_RSMT_wirelength( _circuit, _placementLB )
            << endl;
   }
 
