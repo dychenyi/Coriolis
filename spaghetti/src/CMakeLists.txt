@@ -5,9 +5,11 @@
                         ${HURRICANE_INCLUDE_DIR}
                       )
                    set( includes      spaghetti/Graph.h
+                                      spaghetti/Grid.h
                                       spaghetti/UnionFindMap.h
                       )               
                    set( cpps          Route.cpp
+                                      Grid.cpp
                       )
 
            add_library( spaghetti       ${cpps} )

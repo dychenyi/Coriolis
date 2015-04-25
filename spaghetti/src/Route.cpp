@@ -12,6 +12,28 @@ namespace spaghetti{
 
 using Hurricane::Error;
 
+void Graph::selfcheck() const{
+    for(VertexIndex v=0; v<vertices.size(); ++v){
+        for(EdgeIndex e : vertices[v].edges){
+            assert(e == nullEdgeIndex or e < edges.size());
+            if(e < edges.size())
+                assert(edges[e].vertices[0] == v or edges[e].vertices[1] == v);
+        }
+    }
+    for(EdgeIndex e=0; e<edges.size(); ++e){
+        for(VertexIndex v : edges[e].vertices){
+            assert(v == nullVertexIndex or v < vertices.size());
+            if(v < vertices.size())
+                assert(
+                    vertices[v].edges[0] == e
+                 or vertices[v].edges[1] == e
+                 or vertices[v].edges[2] == e
+                 or vertices[v].edges[3] == e
+                );
+        }
+    }
+}
+
 std::array<Graph::NeighbourAccess, 4> Graph::neighbours(VertexIndex v) const{
     std::array<NeighbourAccess, 4> ret;
     for(int i=0; i<4; ++i){

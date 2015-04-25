@@ -18,15 +18,21 @@ typedef float         Cost;
 const EdgeIndex nullEdgeIndex   = std::numeric_limits<EdgeIndex>::max();
 const EdgeIndex nullVertexIndex = std::numeric_limits<VertexIndex>::max();
 
-struct Edge{
-    std::array<VertexIndex, 2> vertices;
+struct EdgeProperties{
     Capacity capacity, demand;
     Cost basic_cost, history_cost;
 };
 
-struct Vertex{
-    std::array<EdgeIndex, 4> edges;
+struct Edge : EdgeProperties{
+    std::array<VertexIndex, 2> vertices;
+};
+
+struct VertexProperties{
     Cost basic_cost, history_cost;
+};
+
+struct Vertex : VertexProperties{
+    std::array<EdgeIndex, 4> edges;
 };
 
 typedef std::function<Cost (Edge   const &, Capacity demand)> EdgeCostFunction;
@@ -46,6 +52,9 @@ class Graph{
     std::vector<Vertex> vertices;
 
     protected:
+    Edge   & getEdge    ( EdgeIndex );
+    Vertex & getVertex  ( EdgeIndex );
+
     bool isRouted( Net const & n ) const;
     std::vector<std::vector<VertexIndex> > getConnectedComponents( Net const & n ) const;
 
@@ -56,23 +65,35 @@ class Graph{
     void triroute ( EdgeCostFunction, Net & n );
 
     struct NeighbourAccess{
-        EdgeIndex edge;
+        EdgeIndex   edge;
         VertexIndex vertex;
     };
     std::array<NeighbourAccess, 4> neighbours(VertexIndex v) const;
 
     public:
+    Graph(unsigned vertexCount, unsigned edgeCount);
+
     void selfcheck() const;
 };
 
 class RoutableGraph : public Graph{
+    protected:
     std::vector<Net>    nets;
 
     public:
-    void biRoute  ( EdgeCostFunction, VertexCostFunction );
-    void triRoute ( EdgeCostFunction, VertexCostFunction );
     void unroute  ( EdgePredicate );
+
+    void biRoute  ( EdgeCostFunction );
+    void triRoute ( EdgeCostFunction );
+
+    bool rebiroute    ( EdgePredicate, EdgeCostFunction );
+    bool retriroute   ( EdgePredicate, EdgeCostFunction );
+    bool reroutePaths ( EdgePredicate, EdgeCostFunction );
+
     bool isRouted   () const;
+    bool noOverflow ( EdgePredicate ) const;
+
+    RoutableGraph(unsigned vertexCount, unsigned edgeCount);
 };
 
 }
