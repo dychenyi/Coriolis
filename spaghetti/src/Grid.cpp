@@ -5,21 +5,20 @@ namespace spaghetti{
 
 BidimensionalGrid::BidimensionalGrid(unsigned x, unsigned y, std::vector<CNet> const & netsByCoords) :
     RoutableGraph(2*x*y, x*y-x-y)
-    {
-        for(auto n : netsByCoords){
-            Net newNet;
-            for(auto comp : n.components){
-                std::vector<VertexIndex> newComp;
-                for(auto vertex : comp){
-                    // Push two vertices: one for the upper layer and one for the lower layer
-                    newComp.push_back(              vertex.x * ydim + vertex.y);
-                    newComp.push_back(xdim * ydim + vertex.x * ydim + vertex.y);
-                }
-                newNet.initialComponents.push_back(newComp);
+{
+    for(auto n : netsByCoords){
+        Net newNet;
+        for(auto comp : n.components){
+            std::vector<VertexIndex> newComp;
+            for(auto vertex : comp){
+                // Push two vertices: one for the upper layer and one for the lower layer
+                newComp.push_back(              vertex.x * ydim + vertex.y);
+                newComp.push_back(xdim * ydim + vertex.x * ydim + vertex.y);
             }
-            newNet.demand = n.demand;
-            nets.push_back(newNet);
+            newNet.initialComponents.push_back(newComp);
         }
+        newNet.demand = n.demand;
+        nets.push_back(newNet);
     }
 }
 
@@ -31,6 +30,12 @@ EdgeProperties & BidimensionalGrid::getHorizontalEdge  ( unsigned x, unsigned y 
 }
 EdgeProperties & BidimensionalGrid::getVerticalEdge    ( unsigned x, unsigned y ){
     return edges[(2*xdim-1)*ydim + y*xdim + x]; // But only xdim*(ydim-1) of them
+}
+
+BidimensionalGrid::GridCoord BidimensionalGrid::getCoord(VertexIndex v) const{
+    if(v >= xdim * ydim)
+        v -= xdim*ydim;
+    return GridCoord(v/ydim, v%ydim);
 }
 
 } // End namespace spaghetti

@@ -262,8 +262,11 @@ void Graph::biroute  ( EdgeCostFunction edgeCostFunction, Net & n ){
         throw Error("The maze router has been unable to find a path for the net. Are you sure that the graph is connected?\n");
 }
 
-void Graph::triroute ( EdgeCostFunction, Net & n ){
-}
+// TODO: trirouting is not the same as birouting
+// We want to keep track of all triroutes (and even biroutes) found, then when we are sure that no better route exists chose the best one
+// Possible ways: keep track of all positions with a triroute and the length (priority queue?)
+//void Graph::triroute ( EdgeCostFunction, Net & n ){
+//}
 
 } // End namespace spaghetti
 

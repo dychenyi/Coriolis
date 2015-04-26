@@ -48,10 +48,10 @@ struct Net{
 };
 
 class Graph{
+    protected:
     std::vector<Edge>   edges;
     std::vector<Vertex> vertices;
 
-    protected:
     Edge   & getEdge    ( EdgeIndex );
     Vertex & getVertex  ( EdgeIndex );
 
@@ -96,7 +96,7 @@ class RoutableGraph : public Graph{
     RoutableGraph(unsigned vertexCount, unsigned edgeCount);
 };
 
-}
+} // End namespace spaghetti
 
 #endif
 

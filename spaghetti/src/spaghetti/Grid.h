@@ -8,9 +8,13 @@ namespace spaghetti{
 
 struct PlanarCoord{
     unsigned x, y;
+    PlanarCoord(){}
+    PlanarCoord(unsigned xi, unsigned yi) : x(xi), y(yi) {}
 };
 struct VolumeCoord{
     unsigned x, y, layer;
+    VolumeCoord(){}
+    VolumeCoord(unsigned xi, unsigned yi, unsigned li) : x(xi), y(yi), layer(li) {}
 };
 
 struct CNet{
