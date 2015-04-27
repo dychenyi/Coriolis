@@ -1,10 +1,12 @@
 
 #include "spaghetti/Grid.h"
 
+#include <cassert>
+
 namespace spaghetti{
 
 BidimensionalGrid::BidimensionalGrid(unsigned x, unsigned y, std::vector<CNet> const & netsByCoords) :
-    RoutableGraph(2*x*y, x*y-x-y)
+    RoutableGraph(2*x*y, (3 * x * y) - x - y), xdim(x), ydim(y)
 {
     for(auto n : netsByCoords){
         Net newNet;
@@ -23,19 +25,39 @@ BidimensionalGrid::BidimensionalGrid(unsigned x, unsigned y, std::vector<CNet> c
 }
 
 EdgeProperties & BidimensionalGrid::getTurnEdge        ( unsigned x, unsigned y ){
-    return edges[xdim * y + x];
+    EdgeIndex ind = xdim*y + x;
+    assert(ind < edges.size());
+    return static_cast<EdgeProperties&>(edges[ind]);
 }
 EdgeProperties & BidimensionalGrid::getHorizontalEdge  ( unsigned x, unsigned y ){
-    return edges[xdim*ydim + x*ydim + y]; // But only ydim*(xdim-1) of them
+    EdgeIndex ind = xdim*ydim + x*ydim + y; // But only ydim*(xdim-1) of them
+    assert(ind < edges.size());
+    return static_cast<EdgeProperties&>(edges[ind]);
 }
 EdgeProperties & BidimensionalGrid::getVerticalEdge    ( unsigned x, unsigned y ){
-    return edges[(2*xdim-1)*ydim + y*xdim + x]; // But only xdim*(ydim-1) of them
+    return edges[(2*xdim-1)*ydim + y*xdim + x];
+    EdgeIndex ind = (2*xdim-1)*ydim + y*xdim + x; // But only xdim*(ydim-1) of them
+    assert(ind < edges.size());
+    return static_cast<EdgeProperties&>(edges[ind]);
 }
 
 BidimensionalGrid::GridCoord BidimensionalGrid::getCoord(VertexIndex v) const{
     if(v >= xdim * ydim)
         v -= xdim*ydim;
     return GridCoord(v/ydim, v%ydim);
+}
+
+std::vector<std::vector<std::pair<PlanarCoord, PlanarCoord> > > BidimensionalGrid::getRouting() const{
+    std::vector<std::vector<std::pair<GridCoord, GridCoord> > > ret;
+    for(auto const & n : nets){
+        std::vector<std::pair<GridCoord, GridCoord> > cur;
+        for(EdgeIndex e : n.routing){
+            cur.emplace_back(getCoord(edges[e].vertices[0]), getCoord(edges[e].vertices[1]));
+        }
+        ret.push_back(cur);
+    }
+    return ret;
+
 }
 
 } // End namespace spaghetti

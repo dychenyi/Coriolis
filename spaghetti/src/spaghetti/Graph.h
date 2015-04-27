@@ -19,25 +19,44 @@ const EdgeIndex nullEdgeIndex   = std::numeric_limits<EdgeIndex>::max();
 const EdgeIndex nullVertexIndex = std::numeric_limits<VertexIndex>::max();
 
 struct EdgeProperties{
-    Capacity capacity, demand;
-    Cost basic_cost, history_cost;
+    Capacity  capacity;
+    Capacity  demand;
+    Cost      basicCost;
+    Cost      historyCost;
+
+    EdgeProperties(Capacity cap = 16, Cost c = 1.0)
+  : capacity(cap), demand(0), basicCost(c), historyCost(0.0) {}
 };
 
 struct Edge : EdgeProperties{
     std::array<VertexIndex, 2> vertices;
+
+    Edge() : EdgeProperties() {
+        vertices[0] = nullVertexIndex;
+        vertices[1] = nullVertexIndex;
+    }
 };
 
 struct VertexProperties{
-    Cost basic_cost, history_cost;
+    Cost basicCost;
+    Cost historyCost;
+
+    VertexProperties(Cost c = 0.0)
+  : basicCost(c), historyCost(0.0) {}
 };
 
 struct Vertex : VertexProperties{
     std::array<EdgeIndex, 4> edges;
+
+    Vertex() : VertexProperties(){
+        for(int i=0; i<4; ++i)
+            edges[i] = nullEdgeIndex;
+    }    
 };
 
-typedef std::function<Cost (Edge   const &, Capacity demand)> EdgeCostFunction;
-typedef std::function<Cost (Vertex const &, Capacity demand)> VertexCostFunction;
-typedef std::function<bool (Edge   const &)> EdgePredicate;
+typedef std::function<Cost (EdgeProperties   const &, Capacity demand)> EdgeCostFunction;
+typedef std::function<Cost (VertexProperties const &, Capacity demand)> VertexCostFunction;
+typedef std::function<bool (EdgeProperties   const &)> EdgePredicate;
 
 struct Net{
     Capacity demand;
@@ -49,20 +68,19 @@ struct Net{
 
 class Graph{
     protected:
-    std::vector<Edge>   edges;
     std::vector<Vertex> vertices;
+    std::vector<Edge>   edges;
 
-    Edge   & getEdge    ( EdgeIndex );
-    Vertex & getVertex  ( EdgeIndex );
-
-    bool isRouted( Net const & n ) const;
+    bool isNetRouted( Net const & n ) const;
     std::vector<std::vector<VertexIndex> > getConnectedComponents( Net const & n ) const;
 
-    void unrouteUnusedEdges ( Net & n );
-    void unrouteSimplePaths ( Net & n );
+    void unrouteOverflowEdges ( Net & n, EdgePredicate edgePredicate );
+    void unrouteSelectedEdges ( Net & n, std::vector<EdgeIndex> const & sortedEdges );
+    void unrouteUnusedEdges   ( Net & n );
+    void unrouteSimplePaths   ( Net & n );
 
-    void biroute  ( EdgeCostFunction, Net & n );
-    void triroute ( EdgeCostFunction, Net & n );
+    void birouteNet  ( EdgeCostFunction, Net & n );
+    void trirouteNet ( EdgeCostFunction, Net & n );
 
     struct NeighbourAccess{
         EdgeIndex   edge;
@@ -71,29 +89,34 @@ class Graph{
     std::array<NeighbourAccess, 4> neighbours(VertexIndex v) const;
 
     public:
-    Graph(unsigned vertexCount, unsigned edgeCount);
+    Graph(unsigned vertexCnt, unsigned edgeCnt) : vertices(vertexCnt), edges(edgeCnt) {}
 
     void selfcheck() const;
+    VertexIndex vertexCount () const{ return vertices.size(); }
+    EdgeIndex   edgeCount   () const{ return edges.size(); }
 };
 
 class RoutableGraph : public Graph{
     protected:
     std::vector<Net>    nets;
 
+    // TODO: ordering for the nets (based on history, size, or whatever)
+
     public:
     void unroute  ( EdgePredicate );
 
-    void biRoute  ( EdgeCostFunction );
-    void triRoute ( EdgeCostFunction );
+    void biroute  ( EdgeCostFunction );
+    void triroute ( EdgeCostFunction );
 
-    bool rebiroute    ( EdgePredicate, EdgeCostFunction );
-    bool retriroute   ( EdgePredicate, EdgeCostFunction );
-    bool reroutePaths ( EdgePredicate, EdgeCostFunction );
+    void rebiroute    ( EdgePredicate, EdgeCostFunction );
+    void retriroute   ( EdgePredicate, EdgeCostFunction );
 
-    bool isRouted   () const;
-    bool noOverflow ( EdgePredicate ) const;
+    bool isRouted          ()                const;
+    bool overflow          ( EdgePredicate ) const;
+    bool isCorrectlyRouted ( EdgePredicate ) const;
+    size_t netCount        ()                const{ return nets.size(); }
 
-    RoutableGraph(unsigned vertexCount, unsigned edgeCount);
+    RoutableGraph(unsigned vertexCnt, unsigned edgeCnt) : Graph(vertexCnt, edgeCnt) {}
 };
 
 } // End namespace spaghetti

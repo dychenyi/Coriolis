@@ -7,10 +7,20 @@
 #include <unordered_set>
 #include <queue>
 #include <cassert>
+#include <algorithm>
 
 namespace spaghetti{
 
 using Hurricane::Error;
+
+void Net::selfcheck() const{
+    if(demand <= 0)
+        throw Error("The net has non-positive demand\n");
+    std::vector<EdgeIndex> route = routing;
+    std::sort(route.begin(), route.end());
+    if(std::unique(route.begin(), route.end()) != route.end())
+        throw Error("The net has duplicate edges\n");
+}
 
 void Graph::selfcheck() const{
     for(VertexIndex v=0; v<vertices.size(); ++v){
@@ -64,6 +74,7 @@ std::vector<std::vector<VertexIndex> > Graph::getConnectedComponents( Net const 
     std::vector<std::vector<VertexIndex> > ret = UF.getConnectedComponents();
 
     // Verify that every component is connected to at least one of the initialComponents (that is, we get at most one component if we merge all initial ones)
+    // i.e. verify that all parts of the net are connected to one of the actual pins
     VertexIndex pinsRepr = nullVertexIndex;
     for(auto const & comp : n.initialComponents)
         if(not comp.empty()){
@@ -72,9 +83,32 @@ std::vector<std::vector<VertexIndex> > Graph::getConnectedComponents( Net const 
                 pinsRepr = repr;
             UF.merge(repr, pinsRepr);
         }
-    assert(UF.getConnectedComponents.size() <= 1);
+    assert(UF.getConnectedComponents().size() <= 1);
 
     return ret;
+}
+
+void Graph::unrouteOverflowEdges ( Net & n, EdgePredicate edgePredicate ){
+    std::vector<EdgeIndex> newRouting;
+    for(EdgeIndex e : n.routing){
+        if(edgePredicate(edges[e])){
+            edges[e].demand -= n.demand;
+        }
+        else{
+            newRouting.push_back(e);
+        }
+    }
+    n.routing.swap(newRouting);
+}
+
+void Graph::unrouteSelectedEdges ( Net & n, std::vector<EdgeIndex> const & sortedEdges ){
+    std::vector<EdgeIndex> newRouting;
+    for(EdgeIndex e : n.routing){
+        auto it = std::lower_bound(sortedEdges.begin(), sortedEdges.end(), e);
+        if(it == sortedEdges.end() or *it != e)
+            newRouting.push_back(e);
+    }
+    n.routing.swap(newRouting);
 }
 
 // Unroute edges that are connected to only one endpoint (typically after unrouting overflowed edges)
@@ -141,7 +175,7 @@ void Graph::unrouteUnusedEdges ( Net & n ){
             nextRouting.push_back(e);
         }
         else{
-            edges[e].capacity -= n.demand;
+            edges[e].demand -= n.demand;
         }
     }
     n.routing.swap(nextRouting);
@@ -153,6 +187,10 @@ void Graph::unrouteUnusedEdges ( Net & n ){
 // Unrouting them too makes it possible for the router to find new paths connecting several components
 void Graph::unrouteSimplePaths ( Net & n ){
 
+}
+
+bool Graph::isNetRouted(Net const & n) const{
+    return (getConnectedComponents(n).size() <= 1);
 }
 
 // Dijsktra-like algorithms for routing
@@ -178,7 +216,7 @@ struct QueueInfo : ReachedInfo{
     QueueInfo(VertexIndex to, EdgeIndex from, Cost c, int comp) : ReachedInfo(from, c), dest(to), componentId(comp) {}
 };
 
-void Graph::biroute  ( EdgeCostFunction edgeCostFunction, Net & n ){
+void Graph::birouteNet  ( EdgeCostFunction edgeCostFunction, Net & n ){
     n.selfcheck();
     /*
      * Basic algorithm: flood the graph from every component
@@ -198,6 +236,7 @@ void Graph::biroute  ( EdgeCostFunction edgeCostFunction, Net & n ){
 
     // Add a new component
     auto pushComponent = [&](std::vector<VertexIndex> const & vertices){
+        // TODO: uniquify (backtracking duplicates some common vertices)
         int componentId = reachedVertices.size();
         reachedVertices.push_back(ReachedMap());
         for(VertexIndex v : vertices)
@@ -205,7 +244,6 @@ void Graph::biroute  ( EdgeCostFunction edgeCostFunction, Net & n ){
         ++componentsCount;
     };
 
-    // TODO: create the new component as well after backtracking
     // For a particular component, get the path to this vertex (provided it has been reached)
     auto backtrack = [&](VertexIndex from, int componentId, std::vector<VertexIndex> & component){
         std::vector<EdgeIndex> ret;
@@ -216,6 +254,7 @@ void Graph::biroute  ( EdgeCostFunction edgeCostFunction, Net & n ){
             if(e == nullEdgeIndex)
                 break;
             n.routing.push_back(e);
+            edges[e].demand += n.demand;
             cur = cur ^ edges[e].vertices[0] ^ edges[e].vertices[1]; // Get the one not equal to cur
         }
     };
@@ -265,8 +304,8 @@ void Graph::biroute  ( EdgeCostFunction edgeCostFunction, Net & n ){
 // TODO: trirouting is not the same as birouting
 // We want to keep track of all triroutes (and even biroutes) found, then when we are sure that no better route exists chose the best one
 // Possible ways: keep track of all positions with a triroute and the length (priority queue?)
-//void Graph::triroute ( EdgeCostFunction, Net & n ){
-//}
+void Graph::trirouteNet ( EdgeCostFunction, Net & n ){
+}
 
 } // End namespace spaghetti
 

@@ -8,11 +8,13 @@ namespace spaghetti{
 
 struct PlanarCoord{
     unsigned x, y;
+
     PlanarCoord(){}
     PlanarCoord(unsigned xi, unsigned yi) : x(xi), y(yi) {}
 };
 struct VolumeCoord{
     unsigned x, y, layer;
+
     VolumeCoord(){}
     VolumeCoord(unsigned xi, unsigned yi, unsigned li) : x(xi), y(yi), layer(li) {}
 };
@@ -22,7 +24,7 @@ struct CNet{
     std::vector<std::vector<PlanarCoord> > components;
 };
 
-class BidimensionalGrid : RoutableGraph{
+class BidimensionalGrid : public RoutableGraph{
     unsigned xdim, ydim;
 
     public:
@@ -42,7 +44,7 @@ class BidimensionalGrid : RoutableGraph{
     GridCoord getCoord(VertexIndex v) const;
 };
 
-class MultilayerGrid : RoutableGraph{
+class MultilayerGrid : public RoutableGraph{
     public:
     typedef VolumeCoord GridCoord;
 
