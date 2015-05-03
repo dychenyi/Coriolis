@@ -26,14 +26,14 @@ void Graph::selfcheck() const{
     for(VertexIndex v=0; v<vertices.size(); ++v){
         for(EdgeIndex e : vertices[v].edges){
             assert(e == nullEdgeIndex or e < edges.size());
-            if(e < edges.size())
+            if(e != nullEdgeIndex)
                 assert(edges[e].vertices[0] == v or edges[e].vertices[1] == v);
         }
     }
     for(EdgeIndex e=0; e<edges.size(); ++e){
         for(VertexIndex v : edges[e].vertices){
             assert(v == nullVertexIndex or v < vertices.size());
-            if(v < vertices.size())
+            if(v != nullVertexIndex)
                 assert(
                     vertices[v].edges[0] == e
                  or vertices[v].edges[1] == e
@@ -213,7 +213,9 @@ struct QueueInfo : ReachedInfo{
     VertexIndex dest;
     int componentId;
 
-    QueueInfo(VertexIndex to, EdgeIndex from, Cost c, int comp) : ReachedInfo(from, c), dest(to), componentId(comp) {}
+    QueueInfo(VertexIndex to, EdgeIndex from, Cost c, int comp) : ReachedInfo(from, c), dest(to), componentId(comp){
+        assert(to != nullVertexIndex);
+    }
 };
 
 void Graph::birouteNet  ( EdgeCostFunction edgeCostFunction, Net & n ){
@@ -239,8 +241,10 @@ void Graph::birouteNet  ( EdgeCostFunction edgeCostFunction, Net & n ){
         // TODO: uniquify (backtracking duplicates some common vertices)
         int componentId = reachedVertices.size();
         reachedVertices.push_back(ReachedMap());
-        for(VertexIndex v : vertices)
+        for(VertexIndex v : vertices){
+            assert(v != nullVertexIndex);
             events.push(QueueInfo(v, nullEdgeIndex, 0.0f, componentId));
+        }
         ++componentsCount;
     };
 
@@ -266,34 +270,42 @@ void Graph::birouteNet  ( EdgeCostFunction edgeCostFunction, Net & n ){
     while(not events.empty() and componentsCount > 1){
         QueueInfo cur = events.top();
         events.pop();
-        if(reachedVertices[cur.componentId].count(cur.dest) == 0){ // Not already visited
+
+        if(reachedVertices[cur.componentId].count(cur.dest) != 0) continue; // Already visited for this component
+
+        // Mark as visited
+        reachedVertices[cur.componentId].emplace(cur.dest, static_cast<ReachedInfo>(cur));
+
+        // Verify if we can materialize a route i.e. it was visited by another component
+        auto reachedIt = reachingComponent.find(cur.dest);
+        if(reachedIt != reachingComponent.end()){ // Found a route: merge the components with this route
+            int cId1=cur.componentId, cId2=reachedIt->second;
+            std::vector<VertexIndex> newComponent;
+            newComponent.insert(newComponent.end(), connectedComponents[cId1].begin(), connectedComponents[cId1].end());
+            newComponent.insert(newComponent.end(), connectedComponents[cId2].begin(), connectedComponents[cId2].end());
+            backtrack(cur.dest, cId1, newComponent);
+            backtrack(cur.dest, cId2, newComponent);
+            componentsCount -= 2;
+            pushComponent(newComponent);
+
+            // Cleanup (release unused memory)
+            reachedVertices[cId1].clear();
+            reachedVertices[cId2].clear();
+            connectedComponents[cId1].clear();
+            connectedComponents[cId2].clear();
+        }
+        else{
+            // Mark as visited in the shared structure
+            reachingComponent.emplace(cur.dest, cur.componentId);
             // Push the neighbours with their cost to the queue
-            reachedVertices[cur.componentId].emplace(cur.dest, static_cast<ReachedInfo>(cur));
             for(auto neigh : neighbours(cur.dest)){
+                if(neigh.vertex == nullVertexIndex) continue;
+                assert(neigh.edge != nullEdgeIndex);
                 events.push(QueueInfo(
                     neigh.vertex, neigh.edge,
                     cur.cost + edgeCostFunction(edges[neigh.edge], n.demand), cur.componentId)
                 );
             }
-
-            // Verify if we can materialize a route
-            auto reachedIt = reachingComponent.find(cur.dest);
-            if(reachedIt != reachingComponent.end()){
-                int cId1=cur.componentId, cId2=reachedIt->second;
-                std::vector<VertexIndex> newComponent;
-                newComponent.insert(newComponent.end(), connectedComponents[cId1].begin(), connectedComponents[cId1].end());
-                newComponent.insert(newComponent.end(), connectedComponents[cId2].begin(), connectedComponents[cId2].end());
-                reachedVertices[cId1].clear();
-                reachedVertices[cId2].clear();
-                connectedComponents[cId1].clear();
-                connectedComponents[cId2].clear();
-                backtrack(cur.dest, cId1, newComponent);
-                backtrack(cur.dest, cId2, newComponent);
-                componentsCount -= 2;
-                pushComponent(newComponent);
-            }
-            else
-                reachingComponent.emplace(cur.dest, cur.componentId);
         }
     }
 

@@ -60,11 +60,14 @@ int main(){
             }
         }
     }
+
+    grid.selfcheck();
+
     grid.biroute(
         [](EdgeProperties const & e, Capacity d)->Cost{
             Cost ratio1 = (Cost) e.demand / (Cost) e.capacity;
             Cost ratio2 = (Cost) (e.demand+d) / (Cost) e.capacity;
-            return e.basicCost *( 1.0 + 0.01 * (ratio2*ratio2-ratio1*ratio1));
+            return e.basicCost * ( 1.0f + 0.01f * (ratio2*ratio2-ratio1*ratio1));
         }
     );
 

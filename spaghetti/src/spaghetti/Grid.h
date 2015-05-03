@@ -25,11 +25,22 @@ struct CNet{
 };
 
 class BidimensionalGrid : public RoutableGraph{
-    unsigned xdim, ydim;
-
     public:
     typedef PlanarCoord GridCoord;
 
+    private:
+    unsigned xdim, ydim;
+
+    EdgeIndex getTurnEdgeIndex        ( unsigned x, unsigned y ) const;
+    EdgeIndex getHorizontalEdgeIndex  ( unsigned x, unsigned y ) const;
+    EdgeIndex getVerticalEdgeIndex    ( unsigned x, unsigned y ) const;
+
+    GridCoord getCoord(VertexIndex v) const;
+
+    VertexIndex getHorizontalVertexIndex ( unsigned x, unsigned y ) const;
+    VertexIndex getVerticalVertexIndex   ( unsigned x, unsigned y ) const;
+
+    public:
     BidimensionalGrid(unsigned x, unsigned y, std::vector<CNet> const &);
 
     // Access and modify the edges
@@ -39,9 +50,6 @@ class BidimensionalGrid : public RoutableGraph{
 
     // Get the results
     std::vector<std::vector<std::pair<GridCoord, GridCoord> > > getRouting() const;
-
-    private:
-    GridCoord getCoord(VertexIndex v) const;
 };
 
 class MultilayerGrid : public RoutableGraph{
