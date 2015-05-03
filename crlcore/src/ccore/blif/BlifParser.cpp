@@ -61,11 +61,13 @@ namespace {
                  , Model      = 0x00000004
                  , End        = 0x00000008
                  , Subckt     = 0x00000010
-                 , Latch      = 0x00000020
-                 , Inputs     = 0x00000040
-                 , Outputs    = 0x00000080
-                 , Clock      = 0x00000100
-                 , Names      = 0x00000200
+                 , Gate       = 0x00000020
+                 , MLatch     = 0x00000040
+                 , Latch      = 0x00000080
+                 , Inputs     = 0x00000100
+                 , Outputs    = 0x00000200
+                 , Clock      = 0x00000400
+                 , Names      = 0x00000800
                  , CoverZero  = 0x00001000
                  , CoverOne   = 0x00002000
                  , CoverLogic = 0x00004000
@@ -128,7 +130,9 @@ namespace {
     if (_tokens.front() == ".outputs") { _state = Outputs; }
     if (_tokens.front() == ".clock"  ) { _state = Clock;   }
     if (_tokens.front() == ".subckt" ) { _state = Subckt;  }
+    if (_tokens.front() == ".gate"   ) { _state = Gate;    }
     if (_tokens.front() == ".latch"  ) { _state = Latch;   }
+    if (_tokens.front() == ".mlatch" ) { _state = MLatch;  }
     if (_tokens.front() == ".names"  ) {
       _state = Names;
 
@@ -334,8 +338,10 @@ namespace {
 
   void  Model::connectModels ()
   {
-    for ( Model* blifModel : _blifOrder )
+    for ( Model* blifModel : _blifOrder ){
+      cmess2 << "Handling model <" << blifModel->getCell()->getName() << ">" << endl;
       blifModel->connectSubckts();
+    }
   }
 
 
@@ -400,6 +406,7 @@ namespace {
     } else {
       net->addAlias( name );
       if (isExternal) net->setExternal( true );
+      direction &= ~Net::Direction::UNDEFINED;
       direction |= net->getDirection();
       net->setDirection( (Net::Direction::Code)direction );
     }
@@ -463,6 +470,9 @@ namespace {
   void  Model::connectSubckts ()
   {
     for ( Subckt* subckt : _subckts ) {
+      //cparanoid << "Creating instance <" << subckt->getInstanceName() << "> "
+      //          << "of <" << subckt->getModelName() << "> "
+      //          << endl;
       Instance* instance = Instance::create( _cell
                                            , subckt->getInstanceName()
                                            , subckt->getModel()->getCell()
@@ -471,20 +481,62 @@ namespace {
       for ( auto connection : subckt->getConnections() ) {
         string masterNetName = connection.first;
         string netName       = connection.second;
+        //cparanoid << "\tConnection "
+        //          << "plug: <" << masterNetName << ">, "
+        //          << "external: <" << netName << ">."
+        //          << endl;
         Net*   net           = _cell->getNet( netName );
-        Plug*  plug          = instance->getPlug( instance->getMasterCell()->getNet(masterNetName) );
-        Net*   plugNet       = plug->getNet();
 
-        if (not plugNet) {
-          if (not net) net = Net::create( _cell, netName );
-          plug->setNet( net );
-          continue;
+        Net*   masterNet     = instance->getMasterCell()->getNet(masterNetName);
+        if(not masterNet) {
+          ostringstream tmes;
+          tmes << "The master net <" << masterNetName << "> hasn't been found "
+               << "for instance <" << subckt->getInstanceName() << "> "
+               << "of model <" << subckt->getModelName() << ">"
+               << "in model <" << getCell()->getName() << ">"
+               << endl;
+          throw Error(tmes.str());
         }
 
-        if (not net) { plugNet->addAlias( netName ); continue; }
-        if (plugNet == net) continue;
+        Plug*  plug          = instance->getPlug( masterNet );
+        if(not plug) {
+          ostringstream tmes;
+          tmes << "The plug in net <" << netName << "> "
+               << "and master net <" << masterNetName << "> hasn't been found "
+               << "for instance <" << subckt->getInstanceName() << "> "
+               << "of model <" << subckt->getModelName() << ">"
+               << "in model <" << getCell()->getName() << ">"
+               << endl;
+          throw Error(tmes.str());
+        }
 
-        plugNet->merge( net );
+
+        Net*   plugNet       = plug->getNet();
+
+        if (not plugNet) { // Plug not connected yet
+          if (not net) net = Net::create( _cell, netName );
+          plug->setNet( net );
+          plugNet = net;
+        }
+        else if (not net) { // Net doesn't exist yet
+          plugNet->addAlias( netName );
+        }
+        else if (plugNet != net){ // Plus already connected to another net
+          plugNet->merge( net );
+        }
+
+        if( plugNet->getType() == Net::Type::POWER or plugNet->getType() == Net::Type::GROUND ){
+          ostringstream tmes;
+          string powType = plugNet->getType() == Net::Type::POWER ? "power" : "ground";
+          string plugName = plugNet->getName()._getString(); // Name of the original net
+          tmes << "Connecting instance <" << subckt->getInstanceName() << "> "
+               << "of <" << subckt->getModelName() << "> "
+               << "to the " << powType << " net <" << plugName << "> ";
+          if(netName != plugName)
+               tmes << "with the alias <" << netName << ">. ";
+          tmes << "Maybe you should use tie cells?";
+          cerr << Warning(tmes.str()) << endl;
+        }
       }
     }
   }
@@ -560,6 +612,15 @@ namespace CRL {
         continue;
       }
 
+      if (tokenize.state() == Tokenize::MLatch) {
+        cerr << Error( "Blif::load() \".mlatch\" command is not supported.\n"
+                       "                    File %s.blif at line %u."
+                     , blifFile.c_str()
+                     , tokenize.lineno()
+                     ) << endl;
+        continue;
+      }
+
       if (not blifModel) {
         cerr << Error( "Blif::load() Unexpected command \"%s\" outside of .model definition.\n"
                        "                    File %s.blif at line %u."
@@ -584,7 +645,23 @@ namespace CRL {
         if (tokenize.state() & Tokenize::CoverAlias) {
           blifModel->mergeAlias( blifLine[1], blifLine[2] );
         } else if (tokenize.state() & Tokenize::CoverZero) {
+          cerr << Warning( "Blif::load() Definition of an alias <%s> of VSS in a \".names\". Maybe you should use tie cells?\n"
+                         "                    File %s.blif at line %u."
+                       , blifLine[1].c_str()
+                       , blifFile.c_str()
+                       , tokenize.lineno()
+                       ) << endl;
+          //blifModel->mergeAlias( blifLine[1], "vss" );
+          blifModel->getCell()->getNet( "vss" )->addAlias( blifLine[1] );
         } else if (tokenize.state() & Tokenize::CoverOne ) {
+          cerr << Warning( "Blif::load() Definition of an alias <%s> of VDD in a \".names\". Maybe you should use tie cells?\n"
+                         "                    File %s.blif at line %u."
+                       , blifLine[1].c_str()
+                       , blifFile.c_str()
+                       , tokenize.lineno()
+                       ) << endl;
+          //blifModel->mergeAlias( blifLine[1], "vdd" );
+          blifModel->getCell()->getNet( "vdd" )->addAlias( blifLine[1] );
         } else {
           cerr << Error( "Blif::load() Unsupported \".names\" cover construct.\n"
                          "                    File %s.blif at line %u."
@@ -595,7 +672,7 @@ namespace CRL {
         }
       }
 
-      if (tokenize.state() == Tokenize::Subckt) {
+      if (tokenize.state() == Tokenize::Subckt or tokenize.state() == Tokenize::Gate) {
         Subckt* subckt = blifModel->addSubckt( blifLine[1] );
         for ( size_t i=2 ; i<blifLine.size() ; ++i ) {
           size_t equal = blifLine[i].find('=');
