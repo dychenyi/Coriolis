@@ -235,17 +235,35 @@ void Graph::birouteNet  ( EdgeCostFunction edgeCostFunction, Net & n ){
     int componentsCount=0;
 
     std::priority_queue<QueueInfo> events;
+    std::vector<std::vector<VertexIndex> > connectedComponents = getConnectedComponents(n);
 
-    // Add a new component
+    // Push a component on the queue
     auto pushComponent = [&](std::vector<VertexIndex> const & vertices){
         // TODO: uniquify (backtracking duplicates some common vertices)
         int componentId = reachedVertices.size();
-        reachedVertices.push_back(ReachedMap());
         for(VertexIndex v : vertices){
             assert(v != nullVertexIndex);
             events.push(QueueInfo(v, nullEdgeIndex, 0.0f, componentId));
         }
+        reachedVertices.push_back(ReachedMap());
         ++componentsCount;
+    };
+
+    // Add a new component
+    auto addComponent = [&](std::vector<VertexIndex> const & vertices){
+        pushComponent(vertices);
+        connectedComponents.push_back(vertices);
+    };
+
+    auto cleanupComponent = [&](int componentId){
+        // Cleanup (remove component in the shared reached structure)
+        for(auto const & cur : reachedVertices[componentId]){
+            reachingComponent.erase(cur.first);
+        }
+        // Cleanup (reclaim unused memory)
+        reachedVertices[componentId].clear();
+        connectedComponents[componentId].clear();
+        --componentsCount;
     };
 
     // For a particular component, get the path to this vertex (provided it has been reached)
@@ -253,6 +271,7 @@ void Graph::birouteNet  ( EdgeCostFunction edgeCostFunction, Net & n ){
         std::vector<EdgeIndex> ret;
         VertexIndex cur = from;
         while(true){
+            assert(cur != nullVertexIndex);
             component.push_back(cur);
             EdgeIndex e = reachedVertices[componentId].at(cur).edge;
             if(e == nullEdgeIndex)
@@ -260,10 +279,10 @@ void Graph::birouteNet  ( EdgeCostFunction edgeCostFunction, Net & n ){
             n.routing.push_back(e);
             edges[e].demand += n.demand;
             cur = cur ^ edges[e].vertices[0] ^ edges[e].vertices[1]; // Get the one not equal to cur
+            assert(cur == edges[e].vertices[0] or cur == edges[e].vertices[1]);
         }
     };
 
-    std::vector<std::vector<VertexIndex> > connectedComponents = getConnectedComponents(n);
     for(auto const & comp : connectedComponents)
         pushComponent(comp);
 
@@ -272,6 +291,7 @@ void Graph::birouteNet  ( EdgeCostFunction edgeCostFunction, Net & n ){
         events.pop();
 
         if(reachedVertices[cur.componentId].count(cur.dest) != 0) continue; // Already visited for this component
+        if(connectedComponents[cur.componentId].empty()) continue; // The component has been removed
 
         // Mark as visited
         reachedVertices[cur.componentId].emplace(cur.dest, static_cast<ReachedInfo>(cur));
@@ -280,19 +300,17 @@ void Graph::birouteNet  ( EdgeCostFunction edgeCostFunction, Net & n ){
         auto reachedIt = reachingComponent.find(cur.dest);
         if(reachedIt != reachingComponent.end()){ // Found a route: merge the components with this route
             int cId1=cur.componentId, cId2=reachedIt->second;
+
             std::vector<VertexIndex> newComponent;
             newComponent.insert(newComponent.end(), connectedComponents[cId1].begin(), connectedComponents[cId1].end());
             newComponent.insert(newComponent.end(), connectedComponents[cId2].begin(), connectedComponents[cId2].end());
             backtrack(cur.dest, cId1, newComponent);
             backtrack(cur.dest, cId2, newComponent);
-            componentsCount -= 2;
-            pushComponent(newComponent);
 
-            // Cleanup (release unused memory)
-            reachedVertices[cId1].clear();
-            reachedVertices[cId2].clear();
-            connectedComponents[cId1].clear();
-            connectedComponents[cId2].clear();
+            addComponent(newComponent);
+
+            cleanupComponent(cId1);
+            cleanupComponent(cId2);
         }
         else{
             // Mark as visited in the shared structure

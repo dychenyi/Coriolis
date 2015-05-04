@@ -14,8 +14,8 @@ BidimensionalGrid::BidimensionalGrid(unsigned x, unsigned y, std::vector<CNet> c
             std::vector<VertexIndex> newComp;
             for(auto vertex : comp){
                 // Push two vertices: one for the upper layer and one for the lower layer
-                newComp.push_back(              vertex.x * ydim + vertex.y);
-                newComp.push_back(xdim * ydim + vertex.x * ydim + vertex.y);
+                newComp.push_back( getHorizontalVertexIndex (vertex.x, vertex.y) );
+                newComp.push_back( getVerticalVertexIndex   (vertex.x, vertex.y) );
             }
             newNet.initialComponents.push_back(newComp);
         }

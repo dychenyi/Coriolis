@@ -37,6 +37,15 @@ int main(){
         nets.push_back(net);
     }
 
+    for(int n=0; n<netCount; ++n){
+        cout << "Net n°" << n << ":" << endl;
+        for(auto const & comp : nets[n].components){
+            for(auto const & c : comp)
+                cout << "(" << c.x << ", " << c.y << "), ";
+            cout << endl;
+        }
+    }
+
     auto grid = BidimensionalGrid(xdim, ydim, nets);
 
     cout << "Final grid has " << grid.vertexCount() << " vertices, " << grid.edgeCount() << " edges and " << grid.netCount() << " nets. "<< endl;
