@@ -6,10 +6,12 @@
                    set( includes      spaghetti/Graph.h
                                       spaghetti/Grid.h
                                       spaghetti/UnionFindMap.h
+                                      spaghetti/CostFunctions.h
                       )               
                    set( cpps          Graph.cpp
                                       RoutableGraph.cpp
                                       Grid.cpp
+                                      CostFunctions.cpp
                       )
                    set( deplibs       ${HURRICANE_LIBRARIES}
                                       ${Boost_LIBRARIES}

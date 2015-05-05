@@ -8,6 +8,7 @@
 #include <queue>
 #include <cassert>
 #include <algorithm>
+#include <cmath>
 
 namespace spaghetti{
 
@@ -290,6 +291,7 @@ void Graph::birouteNet  ( EdgeCostFunction edgeCostFunction, Net & n ){
         QueueInfo cur = events.top();
         events.pop();
 
+        assert(not std::isnan(cur.cost));
         if(reachedVertices[cur.componentId].count(cur.dest) != 0) continue; // Already visited for this component
         if(connectedComponents[cur.componentId].empty()) continue; // The component has been removed
 

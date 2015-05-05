@@ -56,6 +56,8 @@ struct Vertex : VertexProperties{
 
 typedef std::function<Cost (EdgeProperties   const &, Capacity demand)> EdgeCostFunction;
 typedef std::function<Cost (VertexProperties const &, Capacity demand)> VertexCostFunction;
+typedef std::function<Cost (EdgeProperties   const &)> EdgeEvalFunction;
+typedef std::function<Cost (VertexProperties const &)> VertexEvalFunction;
 typedef std::function<bool (EdgeProperties   const &)> EdgePredicate;
 
 struct Net{
@@ -114,6 +116,11 @@ class RoutableGraph : public Graph{
     bool isRouted          ()                const;
     bool overflow          ( EdgePredicate ) const;
     bool isCorrectlyRouted ( EdgePredicate ) const;
+
+    Cost avgCost           ( EdgeEvalFunction ) const;
+    Cost maxCost           ( EdgeEvalFunction ) const;
+    Cost qAvgCost          ( EdgeEvalFunction ) const;
+
     size_t netCount        ()                const{ return nets.size(); }
 
     RoutableGraph(unsigned vertexCnt, unsigned edgeCnt) : Graph(vertexCnt, edgeCnt) {}
