@@ -20,6 +20,10 @@ inline VertexCostFunction getCostFunction(VertexEvalFunction const & fct){
     };
 }
 
+EdgeEvalFunction edgeDemandFunction();
+EdgeEvalFunction edgeOverflowFunction();
+EdgeEvalFunction edgeRatioFunction();
+
 EdgeEvalFunction basicEdgeEvalFunction();
 EdgeEvalFunction linearEdgeEvalFunction(Cost penalty);
 EdgeEvalFunction thresholdEdgeEvalFunction(Cost multiplier, float threshold=1.0f);

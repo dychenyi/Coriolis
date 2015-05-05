@@ -49,40 +49,9 @@ bool RoutableGraph::isRouted   () const{
     return true;
 }
 
-bool RoutableGraph::overflow ( EdgePredicate edgePredicate ) const{
-    for(EdgeProperties const & e : edges)
-        if(edgePredicate(e))
-            return true;
-    return false;
-}
-
 bool RoutableGraph::isCorrectlyRouted( EdgePredicate edgePredicate ) const{
     return isRouted() and not overflow(edgePredicate);
 }
-
-Cost RoutableGraph::avgCost   ( EdgeEvalFunction edgeEvalFunction ) const{
-    Cost tot = 0.0f;
-    for(Edge const & e : edges)
-        tot += edgeEvalFunction(e);
-    if(edges.size() == 0) return 0.0f;
-    else                  return tot/edges.size();
-}
-Cost RoutableGraph::maxCost   ( EdgeEvalFunction edgeEvalFunction ) const{
-    Cost tot = 0.0f;
-    for(Edge const & e : edges)
-        tot = std::max(edgeEvalFunction(e), tot);
-    return tot;
-}
-Cost RoutableGraph::qAvgCost  ( EdgeEvalFunction edgeEvalFunction ) const{
-    Cost tot = 0.0f;
-    for(Edge const & e : edges){
-        Cost cur = edgeEvalFunction(e);
-        tot += cur*cur;
-    }
-    if(edges.size() == 0) return 0.0f;
-    else                  return std::sqrt(tot/edges.size());
-}
-
 
 } // End namespace spaghetti
 

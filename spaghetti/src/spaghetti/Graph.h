@@ -96,6 +96,15 @@ class Graph{
     void selfcheck() const;
     VertexIndex vertexCount () const{ return vertices.size(); }
     EdgeIndex   edgeCount   () const{ return edges.size(); }
+
+    Cost avgCost            ( EdgeEvalFunction ) const;
+    Cost maxCost            ( EdgeEvalFunction ) const;
+    Cost qAvgCost           ( EdgeEvalFunction ) const;
+
+    bool overflow           ( EdgePredicate ) const;
+    EdgeIndex overflowCount ( EdgePredicate ) const;
+
+    void updateHistoryCosts ( EdgePredicate edgePredicate, Cost mul=1.0f, Cost inc=0.5f );
 };
 
 class RoutableGraph : public Graph{
@@ -114,12 +123,7 @@ class RoutableGraph : public Graph{
     void retriroute   ( EdgePredicate, EdgeCostFunction );
 
     bool isRouted          ()                const;
-    bool overflow          ( EdgePredicate ) const;
     bool isCorrectlyRouted ( EdgePredicate ) const;
-
-    Cost avgCost           ( EdgeEvalFunction ) const;
-    Cost maxCost           ( EdgeEvalFunction ) const;
-    Cost qAvgCost          ( EdgeEvalFunction ) const;
 
     size_t netCount        ()                const{ return nets.size(); }
 

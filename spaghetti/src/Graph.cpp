@@ -187,7 +187,7 @@ void Graph::unrouteUnusedEdges ( Net & n ){
 // That is, every path between two of the initial components, but not parts of the routing that connect 3 or more
 // Unrouting them too makes it possible for the router to find new paths connecting several components
 void Graph::unrouteSimplePaths ( Net & n ){
-
+    // TODO
 }
 
 bool Graph::isNetRouted(Net const & n) const{
@@ -239,9 +239,10 @@ void Graph::birouteNet  ( EdgeCostFunction edgeCostFunction, Net & n ){
     std::vector<std::vector<VertexIndex> > connectedComponents = getConnectedComponents(n);
 
     // Push a component on the queue
-    auto pushComponent = [&](std::vector<VertexIndex> const & vertices){
-        // TODO: uniquify (backtracking duplicates some common vertices)
+    auto pushComponent = [&](std::vector<VertexIndex> vertices){
         int componentId = reachedVertices.size();
+        std::sort(vertices.begin(), vertices.end());
+        vertices.resize(std::distance(vertices.begin(), std::unique(vertices.begin(), vertices.end())));
         for(VertexIndex v : vertices){
             assert(v != nullVertexIndex);
             events.push(QueueInfo(v, nullEdgeIndex, 0.0f, componentId));
@@ -337,6 +338,53 @@ void Graph::birouteNet  ( EdgeCostFunction edgeCostFunction, Net & n ){
 // We want to keep track of all triroutes (and even biroutes) found, then when we are sure that no better route exists chose the best one
 // Possible ways: keep track of all positions with a triroute and the length (priority queue?)
 void Graph::trirouteNet ( EdgeCostFunction, Net & n ){
+}
+
+Cost Graph::avgCost   ( EdgeEvalFunction edgeEvalFunction ) const{
+    Cost tot = 0.0f;
+    for(Edge const & e : edges)
+        tot += edgeEvalFunction(e);
+    if(edges.size() == 0) return 0.0f;
+    else                  return tot/edges.size();
+}
+Cost Graph::maxCost   ( EdgeEvalFunction edgeEvalFunction ) const{
+    Cost tot = 0.0f;
+    for(Edge const & e : edges)
+        tot = std::max(edgeEvalFunction(e), tot);
+    return tot;
+}
+Cost Graph::qAvgCost  ( EdgeEvalFunction edgeEvalFunction ) const{
+    Cost tot = 0.0f;
+    for(Edge const & e : edges){
+        Cost cur = edgeEvalFunction(e);
+        tot += cur*cur;
+    }
+    if(edges.size() == 0) return 0.0f;
+    else                  return std::sqrt(tot/edges.size());
+}
+
+bool Graph::overflow ( EdgePredicate edgePredicate ) const{
+    for(EdgeProperties const & e : edges)
+        if(edgePredicate(e))
+            return true;
+    return false;
+}
+
+EdgeIndex Graph::overflowCount ( EdgePredicate edgePredicate ) const{
+    EdgeIndex count=0;
+    for(EdgeProperties const & e : edges)
+        if(edgePredicate(e))
+            ++count;
+    return count;
+}
+
+void Graph::updateHistoryCosts ( EdgePredicate edgePredicate, Cost mul, Cost inc ){
+    for(EdgeProperties & e : edges){
+        if(edgePredicate(e)){
+            e.historyCost *= mul;
+            e.historyCost += inc;
+        }
+    }
 }
 
 } // End namespace spaghetti

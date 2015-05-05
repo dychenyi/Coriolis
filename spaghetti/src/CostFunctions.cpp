@@ -3,14 +3,33 @@
 
 namespace spaghetti{
 
+EdgeEvalFunction edgeDemandFunction(){
+    return [](EdgeProperties const & e)->Cost{
+        return e.demand;
+    };
+}
+EdgeEvalFunction edgeOverflowFunction(){
+    return [](EdgeProperties const & e)->Cost{
+        return std::max((Cost) e.demand-e.capacity, 0.0f);
+    };
+}
+EdgeEvalFunction edgeRatioFunction(){
+    return [](EdgeProperties const & e)->Cost{
+        if(e.demand==0)
+            return e.demand;
+        else
+            return ((Cost) e.demand) / ((Cost) e.capacity);
+    };
+}
+
 EdgeEvalFunction basicEdgeEvalFunction(){
     return [](EdgeProperties const & e)->Cost{
-        return e.demand * e.basicCost;
+        return e.basicCost * e.demand;
     };
 }
 EdgeEvalFunction linearEdgeEvalFunction(Cost penalty){
     return [penalty](EdgeProperties const & e)->Cost{
-        return e.basicCost * e.demand * (1.0f + penalty * e.demand);
+        return (e.basicCost+e.historyCost) * e.demand * (1.0f + penalty * e.demand);
     };
 }
 EdgeEvalFunction thresholdEdgeEvalFunction(Cost multiplier, float threshold){
@@ -18,7 +37,7 @@ EdgeEvalFunction thresholdEdgeEvalFunction(Cost multiplier, float threshold){
         float t = threshold * e.capacity;
         float dem = std::min(t, (Cost) e.demand);
         float overflow = e.demand - dem;
-        return e.basicCost * (dem + overflow * multiplier);
+        return (e.basicCost+e.historyCost) * (dem + overflow * multiplier);
     };
 }
 EdgeEvalFunction dualthresholdEdgeEvalFunction(Cost multiplier, float t1, float t2){
@@ -27,11 +46,11 @@ EdgeEvalFunction dualthresholdEdgeEvalFunction(Cost multiplier, float t1, float 
         float c2 = t2 * e.capacity;
         float d1 = std::min(c1, (Cost) e.demand);
         float d2 = std::min(c2-c1, e.demand-d1);
-        float overflow = e.demand - d2;
+        float overflow = e.demand - d2 - d1;
         // Quadratic between t1 and t2, derivative from 1 to multiplier
         // TODO: remove divide
         Cost quadfunc = c2 > c1 ? d2*(1.0f + d2*(multiplier-1.0f)/(c2-c1)) : 0.0;
-        return e.basicCost * (d1 + quadfunc + overflow * multiplier);
+        return (e.basicCost+e.historyCost) * (d1 + quadfunc + overflow * multiplier);
     };
 }
 

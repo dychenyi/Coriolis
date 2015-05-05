@@ -50,6 +50,9 @@ class BidimensionalGrid : public RoutableGraph{
 
     // Get the results
     std::vector<std::vector<std::pair<GridCoord, GridCoord> > > getRouting() const;
+
+    unsigned getXDim() const{ return xdim; }
+    unsigned getYDim() const{ return ydim; }
 };
 
 class MultilayerGrid : public RoutableGraph{
