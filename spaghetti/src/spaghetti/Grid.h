@@ -19,8 +19,7 @@ struct VolumeCoord{
     VolumeCoord(unsigned xi, unsigned yi, unsigned li) : x(xi), y(yi), layer(li) {}
 };
 
-struct CNet{
-    Capacity demand;
+struct CNet : NetProperties{
     std::vector<std::vector<PlanarCoord> > components;
 };
 

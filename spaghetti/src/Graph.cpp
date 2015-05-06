@@ -330,7 +330,7 @@ void Graph::birouteNet  ( EdgeCostFunction edgeCostFunction, Net & n ){
                 assert(neigh.edge != nullEdgeIndex);
                 events.push(QueueInfo(
                     neigh.vertex, neigh.edge,
-                    cur.cost + edgeCostFunction(edges[neigh.edge], n.demand), cur.componentId)
+                    cur.cost + edgeCostFunction(edges[neigh.edge], n), cur.componentId)
                 );
             }
         }
@@ -343,7 +343,8 @@ void Graph::birouteNet  ( EdgeCostFunction edgeCostFunction, Net & n ){
 // TODO: trirouting is not the same as birouting
 // We want to keep track of all triroutes (and even biroutes) found, then when we are sure that no better route exists chose the best one
 // Possible ways: keep track of all positions with a triroute and the length (priority queue?)
-void Graph::trirouteNet ( EdgeCostFunction, Net & n ){
+void Graph::trirouteNet ( EdgeCostFunction edgeCostFunction, Net & n ){
+    birouteNet(edgeCostFunction, n);
 }
 
 Cost Graph::avgCost   ( EdgeEvalFunction edgeEvalFunction ) const{

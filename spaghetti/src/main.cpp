@@ -6,10 +6,10 @@ using namespace spaghetti;
 using namespace std;
 
 void outputStats(RoutableGraph const & grid){
-    auto costEval = basicEdgeEvalFunction(); 
+    auto costEval = edgeDemandFunction(); 
     cout << "Routing is finished" << endl;
-    cout << "Avg cost:  \t" << grid.avgCost(costEval)  << endl;
-    cout << "Quad cost: \t" << grid.qAvgCost(costEval) << endl;
+    cout << "Avg demand:  \t" << grid.avgCost(costEval)  << endl;
+    cout << "Quad demand: \t" << grid.qAvgCost(costEval) << endl;
     cout << "Max demand:\t" << grid.maxCost(costEval)  << endl;
     auto ovEval = overflowPredicate();
     cout << "Overflows: " << grid.overflowCount(ovEval) << endl; 
@@ -63,7 +63,7 @@ int main(){
         int nbComps;
         cin >> nbComps;
         CNet net;
-        net.demand = 1;
+        net.cost = 1.0f; net.demand = 1;
         for(int i=0; i<nbComps;++i){
             PlanarCoord cur;
             cin >> cur.x >> cur.y;
@@ -108,46 +108,20 @@ int main(){
     grid.selfcheck();
 
     grid.biroute(
-        dualthresholdEdgeCostFunction(1.01)
+        dualthresholdEdgeCostFunction(0.1)
     );
     outputStats(grid);
-    grid.updateHistoryCosts(overflowPredicate());
-    grid.rebiroute(
-        overflowPredicate(0.8),
-        dualthresholdEdgeCostFunction(1.2)
-    );
-    outputStats(grid);
-    grid.updateHistoryCosts(overflowPredicate());
-    grid.rebiroute(
-        overflowPredicate(0.8),
-        dualthresholdEdgeCostFunction(2.0)
-    );
-    outputStats(grid);
-    grid.updateHistoryCosts(overflowPredicate());
-    grid.rebiroute(
-        overflowPredicate(0.8),
-        dualthresholdEdgeCostFunction(4.0)
-    );
-    outputStats(grid);
-    grid.updateHistoryCosts(overflowPredicate());
-    grid.rebiroute(
-        overflowPredicate(0.8),
-        dualthresholdEdgeCostFunction(10.0)
-    );
-    outputStats(grid);
-    grid.updateHistoryCosts(overflowPredicate());
-    grid.rebiroute(
-        overflowPredicate(0.8),
-        dualthresholdEdgeCostFunction(100.0)
-    );
-    outputStats(grid);
-    grid.updateHistoryCosts(overflowPredicate());
-    grid.rebiroute(
-        overflowPredicate(0.8),
-        dualthresholdEdgeCostFunction(10000.0)
-    );
-    outputStats(grid);
-
+    float mul = 0.1;
+    while(not grid.isCorrectlyRouted(overflowPredicate())){
+        grid.updateHistoryCosts(overflowPredicate());
+        grid.rebiroute(
+            overflowPredicate(1.0),
+            //dualthresholdEdgeCostFunction(mul)
+            thresholdEdgeCostFunction(mul)
+        );
+        outputStats(grid);
+        mul *= 2.0f;
+    }
     if(grid.isRouted())
         cout << "All nets are connected" << endl;
     else

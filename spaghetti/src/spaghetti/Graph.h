@@ -54,19 +54,25 @@ struct Vertex : VertexProperties{
     }    
 };
 
-typedef std::function<Cost (EdgeProperties   const &, Capacity demand)> EdgeCostFunction;
-typedef std::function<Cost (VertexProperties const &, Capacity demand)> VertexCostFunction;
-typedef std::function<Cost (EdgeProperties   const &)> EdgeEvalFunction;
-typedef std::function<Cost (VertexProperties const &)> VertexEvalFunction;
-typedef std::function<bool (EdgeProperties   const &)> EdgePredicate;
-
-struct Net{
+struct NetProperties{
     Capacity demand;
+    Cost     cost;
+
+    NetProperties() : demand(1), cost(1.0f) {}
+};
+
+struct Net : NetProperties{
     std::vector<std::vector<VertexIndex> > initialComponents;
     std::vector<EdgeIndex> routing;
 
     void selfcheck() const;
 };
+
+typedef std::function<Cost ( EdgeProperties   const &, NetProperties const & )> EdgeCostFunction;
+typedef std::function<Cost ( VertexProperties const &, NetProperties const & )> VertexCostFunction;
+typedef std::function<Cost ( EdgeProperties   const & )> EdgeEvalFunction;
+typedef std::function<Cost ( VertexProperties const & )> VertexEvalFunction;
+typedef std::function<bool ( EdgeProperties   const & )> EdgePredicate;
 
 class Graph{
     protected:

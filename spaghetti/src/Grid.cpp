@@ -20,6 +20,7 @@ BidimensionalGrid::BidimensionalGrid(unsigned x, unsigned y, std::vector<CNet> c
             newNet.initialComponents.push_back(newComp);
         }
         newNet.demand = n.demand;
+        newNet.cost = n.cost;
         nets.push_back(newNet);
     }
 

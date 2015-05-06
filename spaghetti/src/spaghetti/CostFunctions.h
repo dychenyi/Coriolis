@@ -7,16 +7,15 @@
 namespace spaghetti{
 
 inline EdgeCostFunction getCostFunction(EdgeEvalFunction const & fct){
-    return [fct](EdgeProperties const & e, Capacity d)->Cost{
+    return [fct](EdgeProperties const & e, NetProperties const & n)->Cost{
         EdgeProperties tmp = e;
-        tmp.demand += d;
-        return fct(tmp) - fct(e);
+        tmp.demand += n.demand;
+        return fct(tmp) - fct(e) + n.cost * e.basicCost + n.demand * e.historyCost;
     };
 }
 inline VertexCostFunction getCostFunction(VertexEvalFunction const & fct){
-    return [fct](VertexProperties const & e, Capacity d)->Cost{
-        VertexProperties tmp = e;
-        return fct(tmp) - fct(e);
+    return [fct](VertexProperties const & v, NetProperties const & n)->Cost{
+        return n.cost * v.basicCost + n.demand * v.historyCost;
     };
 }
 
