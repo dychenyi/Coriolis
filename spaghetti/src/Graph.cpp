@@ -89,6 +89,12 @@ std::vector<std::vector<VertexIndex> > Graph::getConnectedComponents( Net const 
     return ret;
 }
 
+void Graph::unrouteNet ( Net & n ){
+    for(EdgeIndex e : n.routing)
+        edges[e].demand -= n.demand;
+    n.routing.clear();
+}
+
 void Graph::unrouteOverflowEdges ( Net & n, EdgePredicate edgePredicate ){
     std::vector<EdgeIndex> newRouting;
     for(EdgeIndex e : n.routing){
