@@ -28,7 +28,7 @@ void RoutableGraph::triroute ( EdgeCostFunction edgeCostFunction ){
 
 void RoutableGraph::rebiroute    ( EdgePredicate edgePredicate, EdgeCostFunction edgeCostFunction ){
     for(Net & n : nets){
-        unrouteOverflowEdges(n, edgePredicate);
+        unrouteOverflowedEdges(n, edgePredicate);
         unrouteUnusedEdges(n);
         birouteNet(edgeCostFunction, n);
     }
@@ -36,7 +36,7 @@ void RoutableGraph::rebiroute    ( EdgePredicate edgePredicate, EdgeCostFunction
 
 void RoutableGraph::retriroute   ( EdgePredicate edgePredicate, EdgeCostFunction edgeCostFunction ){
     for(Net & n : nets){
-        unrouteOverflowEdges(n, edgePredicate);
+        unrouteOverflowedEdges(n, edgePredicate);
         unrouteUnusedEdges(n);
         trirouteNet(edgeCostFunction, n);
     }

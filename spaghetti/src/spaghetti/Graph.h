@@ -82,11 +82,12 @@ class Graph{
     bool isNetRouted( Net const & n ) const;
     std::vector<std::vector<VertexIndex> > getConnectedComponents( Net const & n ) const;
 
-    void unrouteNet           ( Net & n );
-    void unrouteOverflowEdges ( Net & n, EdgePredicate edgePredicate );
-    void unrouteSelectedEdges ( Net & n, std::vector<EdgeIndex> const & sortedEdges );
-    void unrouteUnusedEdges   ( Net & n );
-    void unrouteSimplePaths   ( Net & n );
+    void unrouteNet             ( Net & n );
+    void unrouteOverflowedEdges ( Net & n, EdgePredicate edgePredicate );
+    void unrouteSelectedEdges   ( Net & n, std::vector<EdgeIndex> const & sortedEdges );
+    void unrouteDuplicatedEdges ( Net & n );
+    void unrouteUnusedEdges     ( Net & n );
+    void unrouteSimplePaths     ( Net & n );
 
     void birouteNet  ( EdgeCostFunction, Net & n );
     void trirouteNet ( EdgeCostFunction, Net & n );

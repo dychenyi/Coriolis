@@ -95,7 +95,7 @@ void Graph::unrouteNet ( Net & n ){
     n.routing.clear();
 }
 
-void Graph::unrouteOverflowEdges ( Net & n, EdgePredicate edgePredicate ){
+void Graph::unrouteOverflowedEdges ( Net & n, EdgePredicate edgePredicate ){
     std::vector<EdgeIndex> newRouting;
     for(EdgeIndex e : n.routing){
         if(edgePredicate(edges[e])){
@@ -118,8 +118,26 @@ void Graph::unrouteSelectedEdges ( Net & n, std::vector<EdgeIndex> const & sorte
     n.routing.swap(newRouting);
 }
 
+void Graph::unrouteDuplicatedEdges ( Net & n ){
+    if(n.routing.empty()) return;
+    std::sort(n.routing.begin(), n.routing.end());
+    size_t j=0;
+    for(size_t i=1; i<n.routing.size(); ++i){
+        if(n.routing[i] == n.routing[j]){
+            edges[n.routing[i]].demand -= n.demand;
+        }
+        else{
+            ++j;
+            n.routing[j] = n.routing[i];
+        }
+    }
+    n.routing.resize(j+1);
+}
+
 // Unroute edges that are connected to only one endpoint (typically after unrouting overflowed edges)
 void Graph::unrouteUnusedEdges ( Net & n ){
+    unrouteDuplicatedEdges(n);
+
     // Build a map with the number of accesses of each vertex (being connected to a pin counts)
     std::unordered_map<VertexIndex, int> connectedCounts;
     // Edges used by the net (could as well use a sorted vector)
@@ -141,26 +159,14 @@ void Graph::unrouteUnusedEdges ( Net & n ){
 
     for(auto const & comp : n.initialComponents){
         for(VertexIndex const v : comp){
-            increment(v);
+            connectedCounts[v] = 1;
         }
     }
 
-    // Uniquification and reachability of vertices
-    std::vector<EdgeIndex> nextRouting;
-    std::unordered_set<EdgeIndex> processedEdges;
     for(EdgeIndex e : n.routing){
-        if(processedEdges.count(e) == 0){
-            increment(edges[e].vertices[0]);
-            increment(edges[e].vertices[1]);
-            nextRouting.push_back(e);
-            processedEdges.emplace(e);
-        }
-        else{
-            edges[e].demand -= n.demand;
-        }
+        increment(edges[e].vertices[0]);
+        increment(edges[e].vertices[1]);
     }
-    n.routing.swap(nextRouting);
-    nextRouting.clear();
 
     // If a vertex has only one access, it is an end of line: we can remove it from the map and delete the edges there
     while(not toProcess.empty()){
@@ -185,6 +191,7 @@ void Graph::unrouteUnusedEdges ( Net & n ){
         }
     }
 
+    std::vector<EdgeIndex> nextRouting;
     // Create the new routing for the net and update the demands for the graph's edges
     std::unordered_set<VertexIndex> removedVerticesSet(removedVertices.begin(), removedVertices.end());
     for(EdgeIndex e : n.routing){
