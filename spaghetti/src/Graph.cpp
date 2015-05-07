@@ -145,6 +145,7 @@ void Graph::unrouteUnusedEdges ( Net & n ){
         }
     }
 
+    // Uniquification and reachability of vertices
     std::vector<EdgeIndex> nextRouting;
     std::unordered_set<EdgeIndex> processedEdges;
     for(EdgeIndex e : n.routing){
