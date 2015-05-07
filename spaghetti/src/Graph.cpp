@@ -114,6 +114,8 @@ void Graph::unrouteSelectedEdges ( Net & n, std::vector<EdgeIndex> const & sorte
         auto it = std::lower_bound(sortedEdges.begin(), sortedEdges.end(), e);
         if(it == sortedEdges.end() or *it != e)
             newRouting.push_back(e);
+        else
+            edges[e].demand -= n.demand;
     }
     n.routing.swap(newRouting);
 }
