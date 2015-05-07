@@ -144,21 +144,21 @@ int main(){
     grid.biroute(
         dualthresholdEdgeCostFunction(0.1)
     );
-    grid.steinerRoute(
-        dualthresholdEdgeCostFunction(0.1)
-    );
+    //grid.steinerRoute(
+    //    basicEdgeCostFunction()
+    //);
     outputStats(grid);
-    float mul = 0.1;
-    while(not grid.isCorrectlyRouted(overflowPredicate())){
-        grid.updateHistoryCosts(overflowPredicate());
-        grid.rebiroute(
-            overflowPredicate(1.0),
-            //dualthresholdEdgeCostFunction(mul)
-            thresholdEdgeCostFunction(mul)
-        );
-        outputStats(grid);
-        mul *= 2.0f;
-    }
+    //float mul = 0.1;
+    //while(not grid.isCorrectlyRouted(overflowPredicate())){
+    //    grid.updateHistoryCosts(overflowPredicate());
+    //    grid.rebiroute(
+    //        overflowPredicate(1.0),
+    //        //dualthresholdEdgeCostFunction(mul)
+    //        thresholdEdgeCostFunction(mul)
+    //    );
+    //    outputStats(grid);
+    //    mul *= 2.0f;
+    //}
     if(grid.isRouted())
         cout << "All nets are connected" << endl;
     else

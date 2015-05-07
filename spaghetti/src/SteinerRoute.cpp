@@ -51,8 +51,9 @@ void BidimensionalGrid::steinerRouteNet ( EdgeCostFunction edgeCostFunction, Net
     // Get which parts may be routed using a different Z-route
     std::vector<CCPair> mandatoryMinMaxs(points.size());
     for(index_t i=0; i<points.size(); ++i){
-        mandatoryMinMaxs[i].first  = inboundVertices[i][0].second     ? points[i].y_ : inboundVertices[i][1].first;
-        mandatoryMinMaxs[i].second = inboundVertices[i].back().second ? points[i].y_ : inboundVertices[i][inboundVertices[i].size()-2].first;
+        //mandatoryMinMaxs[i].first  = inboundVertices[i][0].second     ? inboundVertices[i][0].first : inboundVertices[i][1].first;
+        //mandatoryMinMaxs[i].second = inboundVertices[i].back().second ? inboundVertices[i].back().first : inboundVertices[i][inboundVertices[i].size()-2].first;
+        mandatoryMinMaxs[i] = minmaxs[i];
     }
 
     // Second, materialize those edges
@@ -68,6 +69,7 @@ void BidimensionalGrid::steinerRouteNet ( EdgeCostFunction edgeCostFunction, Net
         unsigned x2 = points[edge.second].x_;
         auto mm1 = mandatoryMinMaxs[edge.first ];
         auto mm2 = mandatoryMinMaxs[edge.second];
+        unsigned xmin=std::min(x1, x2), xmax=std::max(x1, x2);
 
         // Now route between the vertical lines (x1, mm1) to (x2, mm2)
         if(mm1.first <= mm2.second and mm2.first <= mm1.second){ // Overlap on y: route an horizontal wire
@@ -75,7 +77,7 @@ void BidimensionalGrid::steinerRouteNet ( EdgeCostFunction edgeCostFunction, Net
             unsigned bestY = std::numeric_limits<unsigned>::max();
             for(unsigned y=std::max(mm1.first, mm2.first); y<=std::max(mm1.second, mm2.second); ++y){
                 Cost totCost = 0.0f;
-                for(unsigned x=std::min(x1, x2); x<std::max(x1, x2); ++x)
+                for(unsigned x=xmin; x<xmax; ++x)
                     totCost += edgeCostFunction(getHorizontalEdge(x, y), n);
                 if(totCost < minCost){
                     bestY = y;
@@ -83,14 +85,15 @@ void BidimensionalGrid::steinerRouteNet ( EdgeCostFunction edgeCostFunction, Net
                 }
             }
             assert(bestY < ydim and std::isfinite(minCost));
-            for(unsigned x=std::min(x1, x2); x<std::max(x1, x2); ++x)
+            for(unsigned x=xmin; x<xmax; ++x)
                 routeEdge( getHorizontalEdgeIndex(x, bestY), n);
+            routeEdge( getTurnEdgeIndex(xmin, bestY), n);
+            routeEdge( getTurnEdgeIndex(xmax, bestY), n);
         }
         else{ // No overlap: Z-route
             Cost minCost = std::numeric_limits<Cost>::infinity();
             unsigned bestX = std::numeric_limits<unsigned>::max();
             // Find the two points we need to connect
-            unsigned xmin=std::min(x1, x2), xmax=std::max(x1, x2);
             unsigned ymin=std::min(mm1.second, mm2.second), ymax=std::max(mm1.first, mm2.first);
             // What is the y corresponding to xmin/xmax?
             unsigned mm1y = mm1.first == ymax ? mm1.first : mm1.second;
