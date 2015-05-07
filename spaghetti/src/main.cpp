@@ -5,12 +5,18 @@
 using namespace spaghetti;
 using namespace std;
 
-void outputStats(RoutableGraph const & grid){
+void outputStats(BidimensionalGrid const & grid){
     auto costEval = edgeDemandFunction(); 
-    cout << "Routing is finished" << endl;
+    if(grid.isRouted())
+        cout << "Routing has been done" << endl;
+    else
+        cout << "Some nets are left unrouted" << endl;
     cout << "Avg demand:  \t" << grid.avgCost(costEval)  << endl;
     cout << "Quad demand: \t" << grid.qAvgCost(costEval) << endl;
     cout << "Max demand:\t" << grid.maxCost(costEval)  << endl;
+    cout << "Avg H demand:  \t" << grid.avgHCost(costEval)  << endl;
+    cout << "Avg V demand:  \t" << grid.avgVCost(costEval)  << endl;
+    cout << "Avg T demand:  \t" << grid.avgTCost(costEval)  << endl;
     auto ovEval = overflowPredicate();
     cout << "Overflows: " << grid.overflowCount(ovEval) << endl; 
 }
@@ -72,15 +78,6 @@ int main(){
         nets.push_back(net);
     }
 
-    //for(int n=0; n<netCount; ++n){
-    //    cout << "Net n°" << n << ":" << endl;
-    //    for(auto const & comp : nets[n].components){
-    //        for(auto const & c : comp)
-    //            cout << "(" << c.x << ", " << c.y << "), ";
-    //        cout << endl;
-    //    }
-    //}
-
     auto grid = BidimensionalGrid(xdim, ydim, nets);
 
     cout << "Final grid has " << grid.vertexCount() << " vertices, " << grid.edgeCount() << " edges and " << grid.netCount() << " nets. "<< endl;
@@ -107,7 +104,10 @@ int main(){
 
     grid.selfcheck();
 
-    grid.biroute(
+    //grid.biroute(
+    //    dualthresholdEdgeCostFunction(0.1)
+    //);
+    grid.steinerRoute(
         dualthresholdEdgeCostFunction(0.1)
     );
     outputStats(grid);
@@ -127,12 +127,19 @@ int main(){
     else
         cout << "Some nets have not been routed!!" << endl;
     auto res = grid.getRouting();
-    //for(int n=0; n<netCount; ++n){
-    //    cout << "Routing for net " << n << endl;
-    //    for(auto e : res[n]){
-    //        cout << "\t(" << e.first.x << " " << e.first.y << " -> " << e.second.x << " " << e.second.y << ")" << endl;
-    //    }
-    //}
+    for(int n=0; n<netCount; ++n){
+        cout << "Pins for net " << n << endl;
+        for(auto const & comp : nets[n].components){
+            for(auto const & c : comp)
+                cout << "(" << c.x << ", " << c.y << "), ";
+            cout << endl;
+        }
+
+        cout << "Routing for net " << n << endl;
+        for(auto e : res[n].routing){
+            cout << "\t(" << e.first.x << " " << e.first.y << " -> " << e.second.x << " " << e.second.y << ")" << endl;
+        }
+    }
 
     return 0;
 }

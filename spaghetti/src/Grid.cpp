@@ -2,6 +2,7 @@
 #include "spaghetti/Grid.h"
 
 #include <cassert>
+#include <cmath>
 
 namespace spaghetti{
 
@@ -92,20 +93,23 @@ VertexIndex BidimensionalGrid::getVerticalVertexIndex   ( unsigned x, unsigned y
     return (x+xdim)*ydim + y;
 }
 
+EdgeProperties const & BidimensionalGrid::getTurnEdge        ( unsigned x, unsigned y ) const{
+    return edges[getTurnEdgeIndex(x, y)];
+}
+EdgeProperties const & BidimensionalGrid::getHorizontalEdge  ( unsigned x, unsigned y ) const{
+    return edges[getHorizontalEdgeIndex(x, y)];
+}
+EdgeProperties const & BidimensionalGrid::getVerticalEdge    ( unsigned x, unsigned y ) const{
+    return edges[getVerticalEdgeIndex(x, y)];
+}
 EdgeProperties & BidimensionalGrid::getTurnEdge        ( unsigned x, unsigned y ){
-    EdgeIndex ind = getTurnEdgeIndex(x, y);
-    assert(ind < edges.size());
-    return static_cast<EdgeProperties&>(edges[ind]);
+    return edges[getTurnEdgeIndex(x, y)];
 }
 EdgeProperties & BidimensionalGrid::getHorizontalEdge  ( unsigned x, unsigned y ){
-    EdgeIndex ind = getHorizontalEdgeIndex(x, y);
-    assert(ind < edges.size());
-    return static_cast<EdgeProperties&>(edges[ind]);
+    return edges[getHorizontalEdgeIndex(x, y)];
 }
 EdgeProperties & BidimensionalGrid::getVerticalEdge    ( unsigned x, unsigned y ){
-    EdgeIndex ind = getVerticalEdgeIndex(x, y);
-    assert(ind < edges.size());
-    return static_cast<EdgeProperties&>(edges[ind]);
+    return edges[getVerticalEdgeIndex(x, y)];
 }
 
 BidimensionalGrid::GridCoord BidimensionalGrid::getCoord(VertexIndex v) const{
@@ -114,17 +118,119 @@ BidimensionalGrid::GridCoord BidimensionalGrid::getCoord(VertexIndex v) const{
     return GridCoord(v/ydim, v%ydim);
 }
 
-std::vector<std::vector<std::pair<PlanarCoord, PlanarCoord> > > BidimensionalGrid::getRouting() const{
-    std::vector<std::vector<std::pair<GridCoord, GridCoord> > > ret;
+std::vector<RoutedCNet> BidimensionalGrid::getRouting() const{
+    std::vector<RoutedCNet> ret;
     for(auto const & n : nets){
-        std::vector<std::pair<GridCoord, GridCoord> > cur;
+        RoutedCNet cur;
+        for(auto const & comp : n.initialComponents){
+            std::vector<PlanarCoord> newComp;
+            for(VertexIndex v : comp)
+                newComp.push_back(getCoord(v));
+            cur.components.push_back(newComp);
+        }
         for(EdgeIndex e : n.routing){
-            cur.emplace_back(getCoord(edges[e].vertices[0]), getCoord(edges[e].vertices[1]));
+            cur.routing.emplace_back(getCoord(edges[e].vertices[0]), getCoord(edges[e].vertices[1]));
         }
         ret.push_back(cur);
     }
     return ret;
 }
+
+Cost BidimensionalGrid::avgHCost   ( EdgeEvalFunction edgeEvalFunction ) const{
+    Cost tot = 0.0f;
+    for(unsigned y=0; y<ydim; ++y){
+        for(unsigned x=0; x+1<xdim; ++x){
+            tot += edgeEvalFunction(getHorizontalEdge(x, y));
+        }
+    }
+    if(edges.size() == 0) return 0.0f;
+    else                  return tot/(ydim*(xdim-1));
+}
+Cost BidimensionalGrid::maxHCost   ( EdgeEvalFunction edgeEvalFunction ) const{
+    Cost tot = 0.0f;
+    for(unsigned y=0; y<ydim; ++y){
+        for(unsigned x=0; x+1<xdim; ++x){
+            tot = std::max(edgeEvalFunction(getHorizontalEdge(x, y)), tot);
+        }
+    }
+    return tot;
+}
+Cost BidimensionalGrid::qAvgHCost  ( EdgeEvalFunction edgeEvalFunction ) const{
+    Cost tot = 0.0f;
+    for(unsigned y=0; y<ydim; ++y){
+        for(unsigned x=0; x+1<xdim; ++x){
+            Cost cur = edgeEvalFunction(getHorizontalEdge(x, y));
+            tot += cur*cur;
+        }
+    }
+    if(edges.size() == 0) return 0.0f;
+    else                  return std::sqrt(tot/(ydim*(xdim-1)));
+}
+
+Cost BidimensionalGrid::avgVCost   ( EdgeEvalFunction edgeEvalFunction ) const{
+    Cost tot = 0.0f;
+    for(unsigned x=0; x<xdim; ++x){
+        for(unsigned y=0; y+1<ydim; ++y){
+            tot += edgeEvalFunction(getVerticalEdge(x, y));
+        }
+    }
+    if(edges.size() == 0) return 0.0f;
+    else                  return tot/(xdim*(ydim-1));
+}
+Cost BidimensionalGrid::maxVCost   ( EdgeEvalFunction edgeEvalFunction ) const{
+    Cost tot = 0.0f;
+    for(unsigned x=0; x<xdim; ++x){
+        for(unsigned y=0; y+1<ydim; ++y){
+            tot = std::max(edgeEvalFunction(getVerticalEdge(x, y)), tot);
+        }
+    }
+    return tot;
+}
+Cost BidimensionalGrid::qAvgVCost  ( EdgeEvalFunction edgeEvalFunction ) const{
+    Cost tot = 0.0f;
+    for(unsigned x=0; x<xdim; ++x){
+        for(unsigned y=0; y+1<ydim; ++y){
+            Cost cur = edgeEvalFunction(getVerticalEdge(x, y));
+            tot += cur*cur;
+        }
+    }
+    if(edges.size() == 0) return 0.0f;
+    else                  return std::sqrt(tot/(xdim * (ydim-1)));
+}
+
+Cost BidimensionalGrid::avgTCost   ( EdgeEvalFunction edgeEvalFunction ) const{
+    Cost tot = 0.0f;
+    for(unsigned x=0; x<xdim; ++x){
+        for(unsigned y=0; y<ydim; ++y){
+            tot += edgeEvalFunction(getTurnEdge(x, y));
+        }
+    }
+    if(edges.size() == 0) return 0.0f;
+    else                  return tot/(xdim*ydim);
+}
+Cost BidimensionalGrid::maxTCost   ( EdgeEvalFunction edgeEvalFunction ) const{
+    Cost tot = 0.0f;
+    for(unsigned x=0; x<xdim; ++x){
+        for(unsigned y=0; y<ydim; ++y){
+            tot = std::max(edgeEvalFunction(getTurnEdge(x, y)), tot);
+        }
+    }
+    return tot;
+}
+Cost BidimensionalGrid::qAvgTCost  ( EdgeEvalFunction edgeEvalFunction ) const{
+    Cost tot = 0.0f;
+    for(unsigned x=0; x<xdim; ++x){
+        for(unsigned y=0; y<ydim; ++y){
+            Cost cur = edgeEvalFunction(getTurnEdge(x, y));
+            tot += cur*cur;
+        }
+    }
+    if(edges.size() == 0) return 0.0f;
+    else                  return std::sqrt(tot/(xdim*ydim));
+}
+
+
+
 
 } // End namespace spaghetti
 

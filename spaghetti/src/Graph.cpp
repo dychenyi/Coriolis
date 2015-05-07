@@ -144,10 +144,22 @@ void Graph::unrouteUnusedEdges ( Net & n ){
             increment(v);
         }
     }
+
+    std::vector<EdgeIndex> nextRouting;
+    std::unordered_set<EdgeIndex> processedEdges;
     for(EdgeIndex e : n.routing){
-        increment(edges[e].vertices[0]);
-        increment(edges[e].vertices[1]);
+        if(processedEdges.count(e) == 0){
+            increment(edges[e].vertices[0]);
+            increment(edges[e].vertices[1]);
+            nextRouting.push_back(e);
+            processedEdges.emplace(e);
+        }
+        else{
+            edges[e].demand -= n.demand;
+        }
     }
+    n.routing.swap(nextRouting);
+    nextRouting.clear();
 
     // If a vertex has only one access, it is an end of line: we can remove it from the map and delete the edges there
     while(not toProcess.empty()){
@@ -173,12 +185,11 @@ void Graph::unrouteUnusedEdges ( Net & n ){
     }
 
     // Create the new routing for the net and update the demands for the graph's edges
-    std::vector<EdgeIndex> nextRouting;
     std::unordered_set<VertexIndex> removedVerticesSet(removedVertices.begin(), removedVertices.end());
     for(EdgeIndex e : n.routing){
-        // No incident edge has been removed
+        // No incident vertex has been removed
         if(  removedVerticesSet.count(edges[e].vertices[0]) == 0
-         and removedVerticesSet.count(edges[e].vertices[1]) == 0 ){
+         and removedVerticesSet.count(edges[e].vertices[1]) == 0){
             nextRouting.push_back(e);
         }
         else{
@@ -392,6 +403,11 @@ void Graph::updateHistoryCosts ( EdgePredicate edgePredicate, Cost mul, Cost inc
             e.historyCost += inc;
         }
     }
+}
+
+void Graph::routeEdge( EdgeIndex e, Net & n ){
+    edges[e].demand += n.demand;
+    n.routing.push_back(e);
 }
 
 } // End namespace spaghetti

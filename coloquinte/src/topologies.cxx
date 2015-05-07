@@ -125,7 +125,7 @@ std::vector<std::pair<index_t, index_t> > get_topology_from_sorted(std::vector<p
     return std::vector<std::pair<index_t, index_t> >(ret.begin(), ret.end());
 }
 
-std::vector<edge_t> get_vertical_topology(std::vector<point<int_t> > pins, std::vector<edge_t> const & Htopo){
+std::vector<edge_t> get_vertical_topology(std::vector<point<int_t> > const & pins, std::vector<edge_t> const & Htopo){
     index_t const null_ind = std::numeric_limits<index_t>::max();
 
     std::vector<indexed_pt> ipoints(pins.size());

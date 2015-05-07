@@ -23,6 +23,10 @@ struct CNet : NetProperties{
     std::vector<std::vector<PlanarCoord> > components;
 };
 
+struct RoutedCNet : CNet{
+    std::vector<std::pair<PlanarCoord, PlanarCoord> > routing;
+};
+
 class BidimensionalGrid : public RoutableGraph{
     public:
     typedef PlanarCoord GridCoord;
@@ -39,19 +43,38 @@ class BidimensionalGrid : public RoutableGraph{
     VertexIndex getHorizontalVertexIndex ( unsigned x, unsigned y ) const;
     VertexIndex getVerticalVertexIndex   ( unsigned x, unsigned y ) const;
 
+    void steinerRouteNet  ( EdgeCostFunction, Net & n );
+
     public:
     BidimensionalGrid(unsigned x, unsigned y, std::vector<CNet> const &);
 
     // Access and modify the edges
-    EdgeProperties & getTurnEdge        ( unsigned x, unsigned y );
-    EdgeProperties & getHorizontalEdge  ( unsigned x, unsigned y );
-    EdgeProperties & getVerticalEdge    ( unsigned x, unsigned y );
+    EdgeProperties const & getTurnEdge        ( unsigned x, unsigned y ) const;
+    EdgeProperties const & getHorizontalEdge  ( unsigned x, unsigned y ) const;
+    EdgeProperties const & getVerticalEdge    ( unsigned x, unsigned y ) const;
+    EdgeProperties       & getTurnEdge        ( unsigned x, unsigned y );
+    EdgeProperties       & getHorizontalEdge  ( unsigned x, unsigned y );
+    EdgeProperties       & getVerticalEdge    ( unsigned x, unsigned y );
+
+    // Routing using 2D-aware algorithms
+    void steinerRoute ( EdgeCostFunction );
 
     // Get the results
-    std::vector<std::vector<std::pair<GridCoord, GridCoord> > > getRouting() const;
+    std::vector<RoutedCNet> getRouting() const;
 
     unsigned getXDim() const{ return xdim; }
     unsigned getYDim() const{ return ydim; }
+
+    Cost avgHCost            ( EdgeEvalFunction ) const;
+    Cost maxHCost            ( EdgeEvalFunction ) const;
+    Cost qAvgHCost           ( EdgeEvalFunction ) const;
+    Cost avgVCost            ( EdgeEvalFunction ) const;
+    Cost maxVCost            ( EdgeEvalFunction ) const;
+    Cost qAvgVCost           ( EdgeEvalFunction ) const;
+    Cost avgTCost            ( EdgeEvalFunction ) const;
+    Cost maxTCost            ( EdgeEvalFunction ) const;
+    Cost qAvgTCost           ( EdgeEvalFunction ) const;
+
 };
 
 class MultilayerGrid : public RoutableGraph{

@@ -112,6 +112,8 @@ class Graph{
     EdgeIndex overflowCount ( EdgePredicate ) const;
 
     void updateHistoryCosts ( EdgePredicate edgePredicate, Cost mul=1.0f, Cost inc=0.5f );
+
+    void routeEdge( EdgeIndex e, Net & n );
 };
 
 class RoutableGraph : public Graph{

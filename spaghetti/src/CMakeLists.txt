@@ -1,6 +1,7 @@
 # -*- explicit-buffer-name: "CMakeLists.txt<spaghetti/src>" -*-
 
    include_directories( ${SPAGHETTI_SOURCE_DIR}/src
+                        ${COLOQUINTE_INCLUDE_DIR} 
                         ${HURRICANE_INCLUDE_DIR}
                       )
                    set( includes      spaghetti/Graph.h
@@ -12,9 +13,11 @@
                                       RoutableGraph.cpp
                                       Grid.cpp
                                       CostFunctions.cpp
+                                      SteinerRoute.cpp
                       )
                    set( deplibs       ${HURRICANE_LIBRARIES}
                                       ${Boost_LIBRARIES}
+                                      ${COLOQUINTE_LIBRARIES}
                       )
 
            add_library( spaghetti       ${cpps} )
