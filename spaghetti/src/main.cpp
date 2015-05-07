@@ -2,6 +2,9 @@
 #include "spaghetti/CostFunctions.h"
 #include <iostream>
 
+#include <unordered_map>
+#include <unordered_set>
+
 using namespace spaghetti;
 using namespace std;
 
@@ -19,6 +22,40 @@ void outputStats(BidimensionalGrid const & grid){
     cout << "Avg T demand:  \t" << grid.avgTCost(costEval)  << endl;
     auto ovEval = overflowPredicate();
     cout << "Overflows: " << grid.overflowCount(ovEval) << endl; 
+}
+
+void outputNet(BidimensionalGrid const & grid, RoutedCNet const & n){
+    std::unordered_map<unsigned, int> pins;
+    std::unordered_set<unsigned>      routes;
+
+    
+    auto getInd = [&](PlanarCoord a)->unsigned{return a.y*grid.getXDim() + a.x; };
+
+    for(int i=0; i<n.components.size(); ++i){
+        for(PlanarCoord p : n.components[i])
+            pins.emplace(getInd(p), i);
+    }
+    for(auto e : n.routing){
+        routes.emplace(getInd(e.first));
+        routes.emplace(getInd(e.second));
+    }
+
+    for(unsigned y=0; y<grid.getXDim(); ++y){
+        for(unsigned x=0; x<grid.getXDim(); ++x){
+            unsigned ind = getInd(PlanarCoord(x, y));
+            if(pins.count(ind) != 0){
+                cout << pins[ind];
+            }
+            else if(routes.count(ind) != 0){
+                cout << "#";
+            }
+            else{
+                cout << " ";
+            }
+        }
+        cout << endl;
+    }
+    cout << endl;
 }
 
 int main(){
@@ -104,9 +141,9 @@ int main(){
 
     grid.selfcheck();
 
-    //grid.biroute(
-    //    dualthresholdEdgeCostFunction(0.1)
-    //);
+    grid.biroute(
+        dualthresholdEdgeCostFunction(0.1)
+    );
     grid.steinerRoute(
         dualthresholdEdgeCostFunction(0.1)
     );
@@ -136,9 +173,10 @@ int main(){
         }
 
         cout << "Routing for net " << n << endl;
-        for(auto e : res[n].routing){
-            cout << "\t(" << e.first.x << " " << e.first.y << " -> " << e.second.x << " " << e.second.y << ")" << endl;
-        }
+        outputNet(grid, res[n]);
+        //for(auto e : res[n].routing){
+        //    cout << "\t(" << e.first.x << " " << e.first.y << " -> " << e.second.x << " " << e.second.y << ")" << endl;
+        //}
     }
 
     return 0;
