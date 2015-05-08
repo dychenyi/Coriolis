@@ -6,17 +6,20 @@
 
 namespace spaghetti{
 
-BidimensionalGrid::BidimensionalGrid(unsigned x, unsigned y, std::vector<CNet> const & netsByCoords) :
+BidimensionalGrid::BidimensionalGrid(unsigned x, unsigned y, std::vector<CNet> const & netsByCoords, unsigned mask) :
     RoutableGraph(2*x*y, (3 * x * y) - x - y), xdim(x), ydim(y)
 {
+    assert(mask & (HPins | VPins));
     for(auto n : netsByCoords){
         Net newNet;
         for(auto comp : n.components){
             std::vector<VertexIndex> newComp;
             for(auto vertex : comp){
                 // Push two vertices: one for the upper layer and one for the lower layer
-                newComp.push_back( getHorizontalVertexIndex (vertex.x, vertex.y) );
-                newComp.push_back( getVerticalVertexIndex   (vertex.x, vertex.y) );
+                if(mask & HPins)
+                    newComp.push_back( getHorizontalVertexIndex (vertex.x, vertex.y) );
+                if(mask & VPins)
+                    newComp.push_back( getVerticalVertexIndex   (vertex.x, vertex.y) );
             }
             newNet.initialComponents.push_back(newComp);
         }

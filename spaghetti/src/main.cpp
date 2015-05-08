@@ -115,7 +115,7 @@ int main(){
         nets.push_back(net);
     }
 
-    auto grid = BidimensionalGrid(xdim, ydim, nets);
+    auto grid = BidimensionalGrid(xdim, ydim, nets, BidimensionalGrid::HPins);
 
     cout << "Final grid has " << grid.vertexCount() << " vertices, " << grid.edgeCount() << " edges and " << grid.netCount() << " nets. "<< endl;
     for(unsigned x=0; x<xdim; ++x){

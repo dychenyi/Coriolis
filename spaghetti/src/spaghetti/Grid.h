@@ -30,6 +30,11 @@ struct RoutedCNet : CNet{
 class BidimensionalGrid : public RoutableGraph{
     public:
     typedef PlanarCoord GridCoord;
+    enum options{
+        HPins = 0x0001,
+        VPins = 0x0002,
+        Bidir = HPins | VPins
+    };
 
     private:
     unsigned xdim, ydim;
@@ -46,7 +51,7 @@ class BidimensionalGrid : public RoutableGraph{
     void steinerRouteNet  ( EdgeCostFunction, Net & n );
 
     public:
-    BidimensionalGrid(unsigned x, unsigned y, std::vector<CNet> const &);
+    BidimensionalGrid(unsigned x, unsigned y, std::vector<CNet> const &, unsigned mask=HPins | VPins);
 
     // Access and modify the edges
     EdgeProperties const & getTurnEdge        ( unsigned x, unsigned y ) const;
