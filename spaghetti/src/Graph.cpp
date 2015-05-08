@@ -136,9 +136,40 @@ void Graph::unrouteDuplicatedEdges ( Net & n ){
     n.routing.resize(j+1);
 }
 
+void Graph::unrouteInternalEdges ( Net & n ){
+    UnionFindMap<VertexIndex> UF;
+    for(auto const & comp : n.initialComponents){
+        if(not comp.empty()) UF.find(comp.front());
+        for(size_t j=1; j<comp.size(); ++j)
+            UF.merge(comp[j], comp.front());
+    }
+    auto components = UF.getConnectedComponents();
+    std::unordered_map<VertexIndex, int> vComponents;
+    for(int i=0; i<components.size(); ++i){
+        for(VertexIndex v : components[i]){
+            vComponents.emplace(v, i);
+        }
+    }
+    std::vector<EdgeIndex> nextRouting;
+    for(EdgeIndex e : n.routing){
+        auto ait = vComponents.find(edges[e].vertices[0]);
+        auto bit = vComponents.find(edges[e].vertices[1]);
+        // If the edges vertices are both in the same initial component
+        if(ait != vComponents.end() and bit != vComponents.end()
+       and ait->second == bit->second){
+            edges[e].demand -= n.demand;
+        }
+        else{
+            nextRouting.push_back(e);
+        }
+    }
+    n.routing.swap(nextRouting);
+}
+
 // Unroute edges that are connected to only one endpoint (typically after unrouting overflowed edges)
 void Graph::unrouteUnusedEdges ( Net & n ){
     unrouteDuplicatedEdges(n);
+    unrouteInternalEdges(n);
 
     // Build a map with the number of accesses of each vertex (being connected to a pin counts)
     std::unordered_map<VertexIndex, int> connectedCounts;

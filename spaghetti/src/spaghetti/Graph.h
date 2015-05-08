@@ -86,6 +86,7 @@ class Graph{
     void unrouteOverflowedEdges ( Net & n, EdgePredicate edgePredicate );
     void unrouteSelectedEdges   ( Net & n, std::vector<EdgeIndex> const & sortedEdges );
     void unrouteDuplicatedEdges ( Net & n );
+    void unrouteInternalEdges   ( Net & n );
     void unrouteUnusedEdges     ( Net & n );
     void unrouteSimplePaths     ( Net & n );
 
