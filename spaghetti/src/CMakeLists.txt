@@ -3,21 +3,26 @@
    include_directories( ${SPAGHETTI_SOURCE_DIR}/src
                         ${COLOQUINTE_INCLUDE_DIR} 
                         ${HURRICANE_INCLUDE_DIR}
+                        ${UTILITIES_INCLUDE_DIR}
                       )
                    set( includes      spaghetti/Graph.h
                                       spaghetti/Grid.h
                                       spaghetti/UnionFindMap.h
                                       spaghetti/CostFunctions.h
+                                      spaghetti/SpaghettiEngine.h
                       )               
                    set( cpps          Graph.cpp
                                       RoutableGraph.cpp
                                       Grid.cpp
                                       CostFunctions.cpp
                                       SteinerRoute.cpp
+                                      SpaghettiEngine.cpp
                       )
                    set( deplibs       ${HURRICANE_LIBRARIES}
                                       ${Boost_LIBRARIES}
                                       ${COLOQUINTE_LIBRARIES}
+                                      ${CORIOLIS_LIBRARIES}
+                                      #${UTILITIES_LIBRARY}
                       )
 
            add_library( spaghetti       ${cpps} )
