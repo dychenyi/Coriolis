@@ -30,8 +30,8 @@ class BidimensionalGrid;
 
 using Hurricane::Name;
 using Hurricane::Cell;
+using Hurricane::DbU;
 using CRL::RoutingGauge;
-
 
 class SpaghettiEngine : public CRL::ToolEngine {
 
@@ -40,8 +40,6 @@ class SpaghettiEngine : public CRL::ToolEngine {
 
     private:
         static const Name    _toolName;
-        size_t               _hEdgeReservedLocal;
-        size_t               _vEdgeReservedLocal;
         RoutingGauge*        _routingGauge;
         unsigned int         _allowedDepth;
 
@@ -50,11 +48,11 @@ class SpaghettiEngine : public CRL::ToolEngine {
 // Constructors & Destructors
 // **************************
     protected:
-        SpaghettiEngine ( Cell* cell, float edgeCost, float turnCost );
+        SpaghettiEngine ( Cell* cell );
         ~SpaghettiEngine();
 
     public:
-        static SpaghettiEngine* create ( Cell* cell, float edgeCost = 3.0, float turnCost = 0.5 );
+        static SpaghettiEngine* create ( Cell* cell );
         void  _postCreate();
         void   destroy();
         void  _preDestroy();
@@ -63,21 +61,24 @@ class SpaghettiEngine : public CRL::ToolEngine {
 // *********
 
   public:
-           void          setHEdgeReservedLocal   ( size_t reserved ) { _hEdgeReservedLocal = reserved; };
-           void          setVEdgeReservedLocal   ( size_t reserved ) { _vEdgeReservedLocal = reserved; };
            void          setRoutingGauge         ( RoutingGauge* );
            RoutingGauge* getRoutingGauge         () const { return _routingGauge; }
-           void          initGlobalRouting       ( const std::map<Hurricane::Name,Hurricane::Net*>& excludedNets ); // Making it public, so it can be called earlier and then capacities on edges can be ajusted
+
+           void          createRoutingGraph      ( size_t hReserved, size_t vreserved, float edgeCost = 3.0, float turnCost = 0.5 );
+           void          initGlobalRouting       ( const std::map<Hurricane::Name,Hurricane::Net*>& excludedNets );
            void          run                     ( const std::map<Hurricane::Name,Hurricane::Net*>& excludedNets );
+           void          saveRoutingSolution     () const;
 
+  std::vector<DbU::Unit> getHorizontalCutLines   () const;
+  std::vector<DbU::Unit> getVerticalCutLines     () const;
 
+           DbU::Unit     getHorizontalCut        ( unsigned x ) const;
+           DbU::Unit     getVerticalCut          ( unsigned y ) const;
 // Others
 // ******
     public:
         static  SpaghettiEngine* get                  ( const Cell* );
         static  const Name& staticGetName             () { return _toolName; };
-                float       getHEdgeReservedLocal     () { return _hEdgeReservedLocal; };
-                float       getVEdgeReservedLocal     () { return _vEdgeReservedLocal; };
                 const Name& getName                   () const { return _toolName; };
 
 

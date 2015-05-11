@@ -35,10 +35,6 @@
 #include "hurricane/Horizontal.h"
 #include "hurricane/viewer/Script.h"
 #include "crlcore/Measures.h"
-#include "knik/Vertex.h"
-#include "knik/Edge.h"
-#include "knik/Graph.h"
-#include "knik/KnikEngine.h"
 #include "katabatic/AutoContact.h"
 #include "katabatic/GCellGrid.h"
 #include "kite/DataNegociate.h"
@@ -48,7 +44,7 @@
 #include "kite/NegociateWindow.h"
 #include "kite/KiteEngine.h"
 #include "kite/PyKiteEngine.h"
-
+#include "spaghetti/SpaghettiEngine.h"
 
 namespace Kite {
 
@@ -83,7 +79,6 @@ namespace Kite {
   using CRL::addMeasure;
   using CRL::Measures;
   using CRL::MeasuresSet;
-  using Knik::KnikEngine;
   using Katabatic::AutoContact;
   using Katabatic::AutoSegmentLut;
   using Katabatic::ChipTools;
@@ -111,7 +106,7 @@ namespace Kite {
   KiteEngine::KiteEngine ( Cell* cell )
     : KatabaticEngine  (cell)
     , _viewer          (NULL)
-    , _knik            (NULL)
+    , _globalRouter    (NULL)
     , _blockageNet     (cell->getNet("blockagenet"))
     , _configuration   (new Configuration(getKatabaticConfiguration()))
     , _routingPlanes   ()
@@ -194,15 +189,7 @@ namespace Kite {
     cmess2 << "     - RoutingEvents := " << RoutingEvent::getAllocateds() << endl;
 
     if (not ToolEngine::inDestroyAll()) {
-      KnikEngine* attachedKnik = KnikEngine::get( getCell() );
-
-      if (_knik != attachedKnik) {
-        cerr << Error("Knik attribute differs from the Cell attached one (must be the same)\n"
-                      "        On: <%s>."
-                     ,getString(getCell()->getName()).c_str()) << endl;
-        _knik = attachedKnik;
-      }
-      _knik->destroy();
+      if(_globalRouter) _globalRouter->destroy();
     }
 
     ltraceout(90);
@@ -311,39 +298,30 @@ namespace Kite {
   {
     Cell* cell   = getCell();
   //Box   cellBb = cell->getBoundingBox();
-    if (not _knik) {
+    if (not _globalRouter) {
       unsigned int  flags = Cell::WarnOnUnplacedInstances;
       flags |= (mode & KtBuildGlobalRouting) ? Cell::BuildRings : 0;
     //if (not cell->isFlattenedNets()) cell->flattenNets( flags );
       cell->flattenNets( flags );
 
-    // Test signals from <snx2013>.
-    //DebugSession::addToTrace( getCell(), "core.snx_inst.a2_x2_8_sig" );
-    //DebugSession::addToTrace( getCell(), "m_clock" );
-    //DebugSession::addToTrace( getCell(), "a2_x2_8_sig" );
-  
       KatabaticEngine::chipPrep();
   
-      KnikEngine::setHEdgeReservedLocal( 0 );
-      KnikEngine::setVEdgeReservedLocal( 0 );
-      _knik = KnikEngine::create( cell
-                                , 1     // _congestion
-                                , 2     // _preCongestion
-                                , false // _benchMode
-                                , true  // _useSegments
-                                , 2.5   // _edgeCost
-                                );
-      _knik->setRoutingGauge( getConfiguration()->getRoutingGauge() );
-      _knik->setAllowedDepth( getConfiguration()->getAllowedDepth() );
-      _knik->createRoutingGraph();
-      KnikEngine::setHEdgeReservedLocal( getHTracksReservedLocal() );
-      KnikEngine::setVEdgeReservedLocal( getVTracksReservedLocal() );
+      _globalRouter = SpaghettiEngine::create( cell );
+
+      _globalRouter->createRoutingGraph(
+          getHTracksReservedLocal(),
+          getVTracksReservedLocal(),
+          3.0,
+          0.5
+        );
   
     // Decrease the edge's capacity only under the core area.
       const ChipTools& chipTools      = getChipTools();
       size_t           coreReserved   = 0;
       size_t           coronaReserved = 4;
-  
+
+      // TODO: create the edges
+      /*  
       forEach ( Knik::Vertex*, ivertex, _knik->getRoutingGraph()->getVertexes() ) {
         for ( int i=0 ; i<2 ; ++i ) {
           Knik::Edge* edge    = NULL;
@@ -382,6 +360,7 @@ namespace Kite {
           edge->setCapacity( capacity );
         }
       }
+    */
     }
   }
 
@@ -407,7 +386,8 @@ namespace Kite {
     if (getState() > Katabatic::EngineGlobalLoaded)
       throw Error ("KiteEngine::saveGlobalSolution(): Cannot save after detailed routing.");
 
-    _knik->saveSolution();
+    // TODO: save global routing
+    // See _knik->saveSolution();
   }
 
 
@@ -471,11 +451,13 @@ namespace Kite {
             while ( gcell and (gcell != end) ) {
               right = gcell->getRight();
               if (right == NULL) break;
+              /* TODO
               _knik->increaseEdgeCapacity( gcell->getColumn()
                                          , gcell->getRow()
                                          , right->getColumn()
                                          , right->getRow()
                                          , elementCapacity );
+              */
               gcell = right;
             }
           }
@@ -507,12 +489,14 @@ namespace Kite {
             while ( gcell and (gcell != end) ) {
               up = gcell->getUp();
               if (up == NULL) break;
+              /* TODO
               _knik->increaseEdgeCapacity( gcell->getColumn()
                                          , gcell->getRow()
                                          , up->getColumn()
                                          , up->getRow()
                                          , elementCapacity );
               gcell = up;
+              */
             }
           }
         }
@@ -529,7 +513,7 @@ namespace Kite {
     Session::open( this );
 
     if (mode & KtLoadGlobalRouting) {
-      _knik->loadSolution();
+      // TODO: _knik->loadSolution();
     } else {
       annotateGlobalGraph();
       map<Name,Net*>  preRouteds;
@@ -537,7 +521,7 @@ namespace Kite {
         if (istate.second->isMixedPreRoute())
           preRouteds.insert( make_pair(istate.first, istate.second->getNet()) );
       }
-      _knik->run( preRouteds );
+      _globalRouter->run( preRouteds );
     }
 
     setState( Katabatic::EngineGlobalLoaded );
@@ -580,15 +564,9 @@ namespace Kite {
     unsigned int overlaps             = 0;
     size_t       hTracksReservedLocal = getHTracksReservedLocal();
     size_t       vTracksReservedLocal = getVTracksReservedLocal();
-    KnikEngine*  knik                 = KnikEngine::get( getCell() );
-
-    if (knik) {
-      hTracksReservedLocal = knik->getHEdgeReservedLocal();
-      vTracksReservedLocal = knik->getVEdgeReservedLocal();
-    }
 
     if (cparanoid.enabled()) {
-      cparanoid << "  o  Post-checking Knik capacity overload h:" << hTracksReservedLocal
+      cparanoid << "  o  Post-checking capacity overload h:" << hTracksReservedLocal
                 << " v:." << vTracksReservedLocal << endl;
       getGCellGrid()->checkEdgeOverflow( hTracksReservedLocal, vTracksReservedLocal );
     }

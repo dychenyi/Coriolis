@@ -27,17 +27,16 @@ namespace Hurricane {
   class CellViewer;
 }
 
+namespace spaghetti{
+    class SpaghettiEngine;
+}
+
 #include "crlcore/RoutingGauge.h"
 #include "katabatic/KatabaticEngine.h"
-
-namespace Knik {
-  class KnikEngine;
-}
 
 #include "kite/Constants.h"
 #include "kite/TrackElement.h"
 #include "kite/Configuration.h"
-
 
 namespace Kite {
 
@@ -48,6 +47,7 @@ namespace Kite {
   using Hurricane::CellViewer;
   using CRL::RoutingGauge;
   using Katabatic::KatabaticEngine;
+  using spaghetti::SpaghettiEngine;
 
   class Track;
   class RoutingPlane;
@@ -128,7 +128,7 @@ namespace Kite {
       static Name                     _toolName;
     protected:                        
              CellViewer*              _viewer;
-             Knik::KnikEngine*        _knik;
+             SpaghettiEngine*         _globalRouter;
              Net*                     _blockageNet;
              Configuration*           _configuration;
              vector<RoutingPlane*>    _routingPlanes;

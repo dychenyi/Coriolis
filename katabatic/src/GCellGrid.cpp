@@ -16,7 +16,7 @@
 
 #include  "hurricane/Error.h"
 #include  "hurricane/Cell.h"
-#include  "knik/KnikEngine.h"
+#include  "spaghetti/SpaghettiEngine.h"
 #include  "katabatic/Session.h"
 #include  "katabatic/GCellGrid.h"
 #include  "katabatic/KatabaticEngine.h"
@@ -32,12 +32,7 @@ namespace Katabatic {
   using Hurricane::inltrace;
   using Hurricane::Error;
   using Hurricane::ForEachIterator;
-  using Knik::KnikEngine;
-
-
-  const char* missingKnikEngine =
-    "%s :\n\n"
-    "    Hey, Banana! You forgot to run the Knik global router on %s.\n";
+  using spaghetti::SpaghettiEngine;
 
 
 // -------------------------------------------------------------------
@@ -55,22 +50,19 @@ namespace Katabatic {
 
   void  GCellGrid::_postCreate ()
   {
-    KnikEngine* knik;
-    knik = KnikEngine::get ( getCell() );
-    if ( !knik )
-      throw Error ( missingKnikEngine, "GCellGrid::_postCreate()", getString(getCell()).c_str() );
+    SpaghettiEngine* globalRouter = SpaghettiEngine::get ( getCell() );
+    if ( !globalRouter )
+      throw Error ( "%s :\n\n    Hey, Banana! You forgot to run the global router on %s.\n", "GCellGrid::_postCreate()", getString(getCell()).c_str() );
 
-    vector<DbU::Unit>  knikGraduations;
-
-    knik->getHorizontalCutLines ( knikGraduations );
-    for ( size_t i=0 ; i<knikGraduations.size() ; i++ )
-      _yGraduations.addGraduation ( knikGraduations[i] );
+    vector<DbU::Unit> grHGraduations = globalRouter->getHorizontalCutLines ();
+    for ( size_t i=0 ; i<grHGraduations.size() ; i++ )
+      _yGraduations.addGraduation ( grHGraduations[i] );
     _yGraduations.sort ();
     _rows = _yGraduations.getSize() - 1;
 
-    knik->getVerticalCutLines ( knikGraduations );
-    for ( size_t i=0 ; i<knikGraduations.size() ; i++ )
-      _xGraduations.addGraduation ( knikGraduations[i] );
+    vector<DbU::Unit> grVGraduations = globalRouter->getVerticalCutLines ();
+    for ( size_t i=0 ; i<grVGraduations.size() ; i++ )
+      _xGraduations.addGraduation ( grVGraduations[i] );
     _xGraduations.sort ();
     _columns = _xGraduations.getSize() - 1;
 
@@ -96,7 +88,7 @@ namespace Katabatic {
       }
     }
 
-    cmess1 << "  o  Reading GCell grid from Knik ["
+    cmess1 << "  o  Reading GCell grid from Spaghetti ["
            << getColumns() << "x" << getRows() << "] "
            << "(" << (getColumns()*getRows()) << ")." << endl;
 

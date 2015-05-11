@@ -4,6 +4,7 @@
    include_directories( ${KITE_SOURCE_DIR}/src
                         ${CORIOLIS_INCLUDE_DIR} 
                         ${HURRICANE_INCLUDE_DIR} 
+                        ${SPAGHETTI_INCLUDE_DIR} 
                         ${CONFIGURATION_INCLUDE_DIR} 
                         ${WtX_INCLUDE_DIR}
                         ${Boost_INCLUDE_DIRS}
@@ -77,6 +78,7 @@
                                      ${NIMBUS_LIBRARIES}
                                      ${CORIOLIS_PYTHON_LIBRARIES}
                                      ${CORIOLIS_LIBRARIES}
+                                     ${SPAGHETTI_LIBRARIES}
                                      ${HURRICANE_PYTHON_LIBRARIES}
                                      ${HURRICANE_GRAPHICAL_LIBRARIES}
                                      ${HURRICANE_LIBRARIES}

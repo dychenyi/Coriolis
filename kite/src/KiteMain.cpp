@@ -34,9 +34,6 @@ using namespace Hurricane;
 #include "crlcore/ToolBox.h"
 using namespace CRL;
 
-#include "knik/KnikEngine.h"
-using namespace Knik;
-
 #include "kite/KiteEngine.h"
 using namespace Kite;
 

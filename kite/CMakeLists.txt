@@ -21,6 +21,8 @@
  find_package(PythonLibs REQUIRED)
  find_package(PythonSitePackages REQUIRED)
  find_package(VLSISAPD REQUIRED)
+ find_package(COLOQUINTE REQUIRED)
+ find_package(SPAGHETTI REQUIRED)
  find_package(LEFDEF REQUIRED)
  find_package(HURRICANE REQUIRED)
  find_package(CORIOLIS REQUIRED)
