@@ -11,21 +11,7 @@ BidimensionalGrid::BidimensionalGrid(unsigned x, unsigned y, std::vector<CNet> c
 {
     assert(mask & (HPins | VPins));
     for(auto n : netsByCoords){
-        Net newNet;
-        for(auto comp : n.components){
-            std::vector<VertexIndex> newComp;
-            for(auto vertex : comp){
-                // Push two vertices: one for the upper layer and one for the lower layer
-                if(mask & HPins)
-                    newComp.push_back( getHorizontalVertexIndex (vertex.x, vertex.y) );
-                if(mask & VPins)
-                    newComp.push_back( getVerticalVertexIndex   (vertex.x, vertex.y) );
-            }
-            newNet.initialComponents.push_back(newComp);
-        }
-        newNet.demand = n.demand;
-        newNet.cost = n.cost;
-        nets.push_back(newNet);
+        pushNet(n, mask);
     }
 
     // Create all relevant connections for vertices and turn (i.e. via) edges
@@ -74,6 +60,24 @@ BidimensionalGrid::BidimensionalGrid(unsigned x, unsigned y, std::vector<CNet> c
             he.vertices[1] = getHorizontalVertexIndex(x+1, y);
         }
     }
+}
+
+void BidimensionalGrid::pushNet( CNet n, unsigned mask ){
+    Net newNet;
+    for(auto comp : n.components){
+        std::vector<VertexIndex> newComp;
+        for(auto vertex : comp){
+            // Push two vertices: one for the upper layer and one for the lower layer
+            if(mask & HPins)
+                newComp.push_back( getHorizontalVertexIndex (vertex.x, vertex.y) );
+            if(mask & VPins)
+                newComp.push_back( getVerticalVertexIndex   (vertex.x, vertex.y) );
+        }
+        newNet.initialComponents.push_back(newComp);
+    }
+    newNet.demand = n.demand;
+    newNet.cost = n.cost;
+    nets.push_back(newNet);
 }
 
 EdgeIndex BidimensionalGrid::getTurnEdgeIndex        ( unsigned x, unsigned y ) const{

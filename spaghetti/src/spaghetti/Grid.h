@@ -53,6 +53,8 @@ class BidimensionalGrid : public RoutableGraph{
     public:
     BidimensionalGrid(unsigned x, unsigned y, std::vector<CNet> const &, unsigned mask=HPins | VPins);
 
+    void pushNet( CNet, unsigned mask = Bidir );
+
     // Access and modify the edges
     EdgeProperties const & getTurnEdge        ( unsigned x, unsigned y ) const;
     EdgeProperties const & getHorizontalEdge  ( unsigned x, unsigned y ) const;
