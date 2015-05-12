@@ -227,6 +227,7 @@ void SpaghettiEngine::run ( const std::map<Hurricane::Name,Hurricane::Net*>& exc
         basicEdgeCostFunction()
     );
     cmess2 << "Steiner-based routing finished" << std::endl;
+    outputStats();
     float mul = 0.1;
     int i=1;
     while(not _routingGrid->isCorrectlyRouted(overflowPredicate())){
@@ -237,6 +238,7 @@ void SpaghettiEngine::run ( const std::map<Hurricane::Name,Hurricane::Net*>& exc
             thresholdEdgeCostFunction(mul)
         );
         cmess2 << "Global routing iteration " << i << std::endl;
+        outputStats();
         if(not _routingGrid->isRouted())
             throw Error("Ahem. Somehow the global routing algorithm didn't manage to connect some nets even when allowing overflows\n");
         mul *= 1.5f;
@@ -248,6 +250,29 @@ void SpaghettiEngine::run ( const std::map<Hurricane::Name,Hurricane::Net*>& exc
 void SpaghettiEngine::saveRoutingSolution () const
 {
     // TODO: for each net, add all edges in the routing grid to the corresponding nets, create contacts    
+}
+
+void SpaghettiEngine::outputStats () const
+{
+    using namespace std;
+    using namespace Hurricane;
+    if(!_routingGrid) return;
+
+    if(not _routingGrid->isRouted())
+        cmess2 << "Some nets are left unrouted" << endl;
+    auto costEval = edgeDemandFunction();
+    Cost hcost = _routingGrid->avgHCost(costEval);
+    Cost vcost = _routingGrid->avgVCost(costEval);
+    size_t xdim = _routingGrid->getXDim();
+    size_t ydim = _routingGrid->getYDim();
+
+    cmess2 << "\t" << xdim << " * " << ydim << " grid" << endl;
+    cmess2 << "\tAvg H demand:  \t" << hcost  << endl;
+    cmess2 << "\tAvg V demand:  \t" << vcost  << endl;
+    cmess2 << "\tGR wirelength: \t" << hcost * ydim * (xdim-1) + vcost * xdim * (ydim-1) << endl;
+    auto ovEval = overflowPredicate();
+    cout << "Overflows: " << _routingGrid->overflowCount(ovEval) << endl;
+
 }
 
 std::vector<DbU::Unit> SpaghettiEngine::getHorizontalCutLines   () const
