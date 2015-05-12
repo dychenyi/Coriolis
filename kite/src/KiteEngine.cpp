@@ -550,6 +550,7 @@ namespace Kite {
 
     if (mode & KtLoadGlobalRouting) {
       // TODO: _knik->loadSolution();
+      throw Error("Loading a previous solution is not supported by Spaghetti\n");
     } else {
       annotateGlobalGraph();
       map<Name,Net*>  preRouteds;

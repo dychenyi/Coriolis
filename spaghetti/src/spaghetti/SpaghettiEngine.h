@@ -14,13 +14,14 @@
 // +-----------------------------------------------------------------+
 
 
-#include "hurricane/Timer.h"
-#include "hurricane/Property.h"
-#include "hurricane/Net.h"
-#include "hurricane/RoutingPad.h"
 #include "crlcore/ToolEngine.h"
 
 #include "spaghetti/Common.h"
+
+namespace Hurricane {
+  class Net;
+  class RoutingPad;
+}
 
 namespace CRL {
   class RoutingGauge;

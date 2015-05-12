@@ -1795,7 +1795,7 @@ namespace Katabatic {
   void  KatabaticEngine::_loadGrByNet ()
   {
     cmess1 << "  o  Loading Nets from the global router" << endl;
-    cmess1 << Dots::asDouble("     - Saturation",getMeasure<double>(getCell(),"Sat.")->getData()) << endl;
+    //cmess1 << Dots::asDouble("     - Saturation",getMeasure<double>(getCell(),"Sat.")->getData()) << endl;
 
     startMeasures();
     Session::open( this );

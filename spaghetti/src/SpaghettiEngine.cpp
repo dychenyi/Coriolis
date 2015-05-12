@@ -1,12 +1,14 @@
 
 #include "hurricane/Error.h"
 #include "hurricane/Component.h"
+#include "hurricane/RoutingPad.h"
 #include "hurricane/Net.h"
 #include "hurricane/DeepNet.h"
 #include "hurricane/Cell.h"
 #include "hurricane/Technology.h"
 #include "hurricane/DataBase.h"
 #include "hurricane/UpdateSession.h"
+#include "hurricane/Property.h"
 #include "hurricane/NetRoutingProperty.h"
 
 #include "hurricane/Segment.h"
@@ -161,7 +163,7 @@ void SpaghettiEngine::createRoutingGraph ( Capacity hreserved, Capacity vreserve
     }
     for(unsigned x=0; x<xdim; ++x){
         for(unsigned y=0; y<ydim; ++y){
-            Capacity cap = _routingGrid->getVerticalEdge(x, y).capacity;
+            Capacity cap = _routingGrid->getTurnEdge(x, y).capacity;
             cap = std::max(0, cap-hreserved-vreserved);
             _routingGrid->getTurnEdge(x, y).capacity    = cap;
             _routingGrid->getTurnEdge(x, y).basicCost   = turnCost;
@@ -202,10 +204,10 @@ void SpaghettiEngine::initGlobalRouting ( const std::map<Hurricane::Name,Hurrica
         if ( dynamic_cast<RoutingPad*>(component) or dynamic_cast<Segment*>(component) ){
             newNet.components.emplace_back();
             Box cur;
-            if( dynamic_cast<RoutingPad*>(component) ) cur = dynamic_cast<RoutingPad*>(component)->getBoundingBox();
-            else if( dynamic_cast<Horizontal*>(component) ) cur = dynamic_cast<Horizontal*>(component)->getBoundingBox();
-            else if( dynamic_cast<Vertical*>(component) ) cur = dynamic_cast<Vertical*>(component)->getBoundingBox();
-            else throw Error("The Segment is neither Horizontal nor Vertical\n");
+            if( dynamic_cast<Horizontal *>(component) ) cur = dynamic_cast<Horizontal*>(component)->getBoundingBox();
+       else if( dynamic_cast<Vertical   *>(component) ) cur = dynamic_cast<Vertical*>(component)->getBoundingBox();
+       else if( dynamic_cast<RoutingPad *>(component) ) continue; //cur = dynamic_cast<RoutingPad*>(component)->getBoundingBox();
+       else throw Error("The Segment is neither Horizontal nor Vertical\n");
 
             for(unsigned x=getGridX(cur.getXMin()); x<=getGridX(cur.getXMax()); ++x){
                 for(unsigned y=getGridY(cur.getYMin()); y<=getGridY(cur.getYMax()); ++y){
@@ -255,6 +257,9 @@ void SpaghettiEngine::run ( const std::map<Hurricane::Name,Hurricane::Net*>& exc
 void SpaghettiEngine::saveRoutingSolution () const
 {
     // TODO: for each net, add all edges in the routing grid to the corresponding nets, create contacts    
+    // For each net, find the bounding boxes of all segments and routing pads; find connected groups of segments and routing pads
+    // Find their positions on the grid and connect them physically if they are in the same grid cell
+    // Then create contacts for each turn and connexion to the initial segments; materialize the segments between them
 }
 
 void SpaghettiEngine::outputStats () const

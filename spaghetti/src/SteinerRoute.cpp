@@ -3,10 +3,25 @@
 #include "coloquinte/circuit_helper.hxx"
 #include "spaghetti/Grid.h"
 
+#include "hurricane/Error.h"
+#include "crlcore/Utilities.h"
+
 namespace spaghetti{
 
 void BidimensionalGrid::steinerRouteNet ( EdgeCostFunction edgeCostFunction, Net & n ){
     using namespace coloquinte;
+
+    bool singleVertexComponents = true;
+    for(auto const & comp : n.initialComponents){
+        if(comp.size() > 2 or (comp.size() == 2 and getCoord(comp[0]) != getCoord(comp[1]) )){
+            singleVertexComponents = false;
+        }
+    }
+    if(not n.routing.empty() or not singleVertexComponents){
+        std::cerr << Hurricane::Error("Trying to route with Steiner a net with non-ponctual components or partially routed") << std::endl;
+        birouteNet( edgeCostFunction, n );
+        return;
+    }
 
     // TODO: consider vertical pins as well since my algorithm can handle it
     auto components = getConnectedComponents(n);

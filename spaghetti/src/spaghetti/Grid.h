@@ -9,6 +9,9 @@ namespace spaghetti{
 struct PlanarCoord{
     unsigned x, y;
 
+    bool operator==(PlanarCoord const & o) const { return x==o.x and y==o.y; }
+    bool operator!=(PlanarCoord const & o) const { return x!=o.x or  y!=o.y; }
+
     PlanarCoord(){}
     PlanarCoord(unsigned xi, unsigned yi) : x(xi), y(yi) {}
 };
