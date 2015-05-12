@@ -4,19 +4,11 @@
 
 #include <vector>
 #include <array>
-#include <cstdint>
 #include <functional>
-#include <limits>
+
+#include "Common.h"
 
 namespace spaghetti{
-
-typedef std::uint32_t EdgeIndex;
-typedef std::uint32_t VertexIndex;
-typedef std::int32_t  Capacity;
-typedef float         Cost;
-
-const EdgeIndex nullEdgeIndex   = std::numeric_limits<EdgeIndex>::max();
-const EdgeIndex nullVertexIndex = std::numeric_limits<VertexIndex>::max();
 
 struct EdgeProperties{
     Capacity  capacity;
@@ -24,7 +16,7 @@ struct EdgeProperties{
     Cost      basicCost;
     Cost      historyCost;
 
-    EdgeProperties(Capacity cap = 16, Cost c = 1.0)
+    EdgeProperties(Capacity cap = 0, Cost c = 1.0)
   : capacity(cap), demand(0), basicCost(c), historyCost(0.0) {}
 };
 

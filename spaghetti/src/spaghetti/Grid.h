@@ -51,7 +51,7 @@ class BidimensionalGrid : public RoutableGraph{
     void steinerRouteNet  ( EdgeCostFunction, Net & n );
 
     public:
-    BidimensionalGrid(unsigned x, unsigned y, std::vector<CNet> const &, unsigned mask=HPins | VPins);
+    BidimensionalGrid(unsigned x, unsigned y, std::vector<CNet> const & nets = std::vector<CNet>(), unsigned mask=HPins | VPins);
 
     void pushNet( CNet, unsigned mask = Bidir );
 

@@ -20,6 +20,8 @@
 #include "hurricane/RoutingPad.h"
 #include "crlcore/ToolEngine.h"
 
+#include "spaghetti/Common.h"
+
 namespace CRL {
   class RoutingGauge;
 }
@@ -63,8 +65,10 @@ class SpaghettiEngine : public CRL::ToolEngine {
   public:
            void          setRoutingGauge         ( RoutingGauge* );
            RoutingGauge* getRoutingGauge         () const { return _routingGauge; }
+           void          setAllowedDepth         ( unsigned int );
+           unsigned int  getAllowedDepth         () const { return _allowedDepth; }
 
-           void          createRoutingGraph      ( size_t hReserved, size_t vreserved, float edgeCost = 3.0, float turnCost = 0.5 );
+           void          createRoutingGraph      ( Capacity hReserved, Capacity vreserved, float edgeCost = 3.0, float turnCost = 0.5 );
            void          initGlobalRouting       ( const std::map<Hurricane::Name,Hurricane::Net*>& excludedNets );
            void          run                     ( const std::map<Hurricane::Name,Hurricane::Net*>& excludedNets );
            void          saveRoutingSolution     () const;
@@ -72,8 +76,8 @@ class SpaghettiEngine : public CRL::ToolEngine {
   std::vector<DbU::Unit> getHorizontalCutLines   () const;
   std::vector<DbU::Unit> getVerticalCutLines     () const;
 
-           DbU::Unit     getHorizontalCut        ( unsigned x ) const;
-           DbU::Unit     getVerticalCut          ( unsigned y ) const;
+           DbU::Unit     getVerticalCut          ( unsigned x ) const;
+           DbU::Unit     getHorizontalCut        ( unsigned y ) const;
 // Others
 // ******
     public:
