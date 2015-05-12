@@ -309,6 +309,8 @@ namespace Kite {
   
       _globalRouter = SpaghettiEngine::create( cell );
 
+      _globalRouter->setRoutingGauge( getConfiguration()->getRoutingGauge() );
+      _globalRouter->setAllowedDepth( getConfiguration()->getAllowedDepth() );
       _globalRouter->createRoutingGraph(
           getHTracksReservedLocal(),
           getVTracksReservedLocal(),

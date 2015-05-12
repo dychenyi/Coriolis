@@ -1,5 +1,14 @@
 
 #include "hurricane/Error.h"
+#include "hurricane/Component.h"
+#include "hurricane/Net.h"
+#include "hurricane/DeepNet.h"
+#include "hurricane/Cell.h"
+#include "hurricane/Technology.h"
+#include "hurricane/DataBase.h"
+#include "hurricane/UpdateSession.h"
+#include "hurricane/NetRoutingProperty.h"
+
 #include "crlcore/Utilities.h"
 #include "crlcore/AllianceFramework.h"
 #include "crlcore/RoutingGauge.h"
@@ -9,8 +18,10 @@
 #include "crlcore/CellGauge.h"
 
 #include "spaghetti/SpaghettiEngine.h"
-
 #include "spaghetti/Grid.h"
+#include "spaghetti/CostFunctions.h"
+
+#include <sstream>
 
 namespace spaghetti{
 
@@ -93,6 +104,9 @@ void SpaghettiEngine::createRoutingGraph ( Capacity hreserved, Capacity vreserve
     _routingGrid = new BidimensionalGrid(xdim, ydim);
 
     // Now initialize the capacities correctly (they should initially be 0)
+    RoutingGauge* gauge = getRoutingGauge();
+    if(!gauge)
+        throw Error("SpaghettiEngine::createRoutingGraph(): No routing gauge specified\n");
     vector<RoutingLayerGauge*> rtLGauges = getRoutingGauge()->getLayerGauges();
     for ( vector<RoutingLayerGauge*>::iterator it = rtLGauges.begin() ; it != rtLGauges.end() ; it++ ) {
         RoutingLayerGauge* routingLayerGauge = (*it);
@@ -154,18 +168,67 @@ void SpaghettiEngine::createRoutingGraph ( Capacity hreserved, Capacity vreserve
 
 void SpaghettiEngine::initGlobalRouting ( const std::map<Hurricane::Name,Hurricane::Net*>& excludedNets )
 {
+    using namespace std;
+    using namespace Hurricane;
+
     if(!_routingGrid)
         throw Error("SpaghettiEngine::initGlobalRouting(): the routing grid hasn't been initialized\n");
-    
+
+    Name obstacleNetName ("obstaclenet");
+    forEach ( Hurricane::Net*, inet, getCell()->getNets() ) {
+      if (excludedNets.find(inet->getName()) != excludedNets.end()) {
+        if (NetRoutingExtension::isUnconnected(*inet))
+          cparanoid << "     - <" << inet->getName() << "> not routed (unconnected)." << endl;
+        else
+          cparanoid << "     - <" << inet->getName() << "> not routed (pre-routing found)." << endl;
+        continue;
+      }
+  
+      if (   inet->isGlobal()
+         or  inet->isSupply()
+         or (inet->getName() == obstacleNetName) ) {
+        cmess2 << "     - <" << inet->getName() << "> not routed (global, supply, clock or obstacle)." << endl;
+        continue;
+      }
+
+      // TODO: Now add all existing segments to the initial components
+      for_each_component ( component, inet->getComponents() ) {
+        if ( dynamic_cast<RoutingPad*>(component) )
+            cerr << "Routing pad: " << static_cast<RoutingPad*>(component) << endl;
+        if ( dynamic_cast<Contact*>(component) ) {
+            cerr << "Routing pad: " << static_cast<Contact*>(component) << endl;
+            /*if ( isAGlobalRoutingContact ( contact ) )
+                vContacts.push_back ( contact ); */
+        }
+        end_for;
+      }
+
+    }
 }
 
 void SpaghettiEngine::run ( const std::map<Hurricane::Name,Hurricane::Net*>& excludedNets )
 {
+    initGlobalRouting(excludedNets);
+    _routingGrid->steinerRoute(
+        basicEdgeCostFunction()
+    );
+    float mul = 0.1;
+    while(not _routingGrid->isCorrectlyRouted(overflowPredicate())){
+        _routingGrid->updateHistoryCosts(overflowPredicate(), 1.0, mul * 0.25);
+        _routingGrid->rebiroute(
+            overflowPredicate(1.0),
+            //dualthresholdEdgeCostFunction(mul)
+            thresholdEdgeCostFunction(mul)
+        );
+        if(not _routingGrid->isRouted())
+            throw Error("Ahem. Somehow the global routing algorithm didn't manage to connect some nets even when allowing overflows\n");
+        mul *= 1.5f;
+    }
 }
 
 void SpaghettiEngine::saveRoutingSolution () const
 {
-    
+    // TODO: for each net, add all edges in the routing grid to the corresponding nets, create contacts    
 }
 
 std::vector<DbU::Unit> SpaghettiEngine::getHorizontalCutLines   () const
