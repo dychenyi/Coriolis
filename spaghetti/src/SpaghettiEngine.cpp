@@ -1,6 +1,7 @@
 
 #include "hurricane/Error.h"
 #include "hurricane/Component.h"
+#include "hurricane/Segment.h"
 #include "hurricane/Net.h"
 #include "hurricane/DeepNet.h"
 #include "hurricane/Cell.h"
@@ -175,6 +176,7 @@ void SpaghettiEngine::initGlobalRouting ( const std::map<Hurricane::Name,Hurrica
         throw Error("SpaghettiEngine::initGlobalRouting(): the routing grid hasn't been initialized\n");
 
     Name obstacleNetName ("obstaclenet");
+    // Careful with name clash between Hurricane::Net and Spaghetti::Net
     forEach ( Hurricane::Net*, inet, getCell()->getNets() ) {
       if (excludedNets.find(inet->getName()) != excludedNets.end()) {
         if (NetRoutingExtension::isUnconnected(*inet))
@@ -191,17 +193,29 @@ void SpaghettiEngine::initGlobalRouting ( const std::map<Hurricane::Name,Hurrica
         continue;
       }
 
+      CNet newNet; newNet.demand = 1; newNet.cost = 1.0;
       // TODO: Now add all existing segments to the initial components
       for_each_component ( component, inet->getComponents() ) {
-        if ( dynamic_cast<RoutingPad*>(component) )
-            cerr << "Routing pad: " << static_cast<RoutingPad*>(component) << endl;
-        if ( dynamic_cast<Contact*>(component) ) {
-            cerr << "Routing pad: " << static_cast<Contact*>(component) << endl;
+        if ( dynamic_cast<RoutingPad*>(component) ){
+            newNet.components.emplace_back();
+            Box cur = dynamic_cast<RoutingPad*>(component)->getBoundingBox();
+            for(unsigned x=getGridX(cur.getXMin()); x<=getGridX(cur.getXMax()); ++x){
+                for(unsigned y=getGridY(cur.getYMin()); y<=getGridY(cur.getYMax()); ++y){
+                    newNet.components.back().push_back(PlanarCoord(x, y));
+                }
+            }
+        }
+        else if ( dynamic_cast<Segment*>(component) ){
+            //cerr << Error("In net <%s>: found <%s> before routing\n", inet->_getString().c_str(), component->_getString().c_str()) << endl;
+        }
+        else if ( dynamic_cast<Contact*>(component) ) {
+            //cerr << Error("In net <%s>: found <%s> before routing\n", inet->_getString().c_str(), component->_getString().c_str()) << endl;
             /*if ( isAGlobalRoutingContact ( contact ) )
                 vContacts.push_back ( contact ); */
         }
         end_for;
       }
+      _routingGrid->pushNet(newNet);
 
     }
 }
@@ -212,7 +226,9 @@ void SpaghettiEngine::run ( const std::map<Hurricane::Name,Hurricane::Net*>& exc
     _routingGrid->steinerRoute(
         basicEdgeCostFunction()
     );
+    cmess2 << "Steiner-based routing finished" << std::endl;
     float mul = 0.1;
+    int i=1;
     while(not _routingGrid->isCorrectlyRouted(overflowPredicate())){
         _routingGrid->updateHistoryCosts(overflowPredicate(), 1.0, mul * 0.25);
         _routingGrid->rebiroute(
@@ -220,10 +236,13 @@ void SpaghettiEngine::run ( const std::map<Hurricane::Name,Hurricane::Net*>& exc
             //dualthresholdEdgeCostFunction(mul)
             thresholdEdgeCostFunction(mul)
         );
+        cmess2 << "Global routing iteration " << i << std::endl;
         if(not _routingGrid->isRouted())
             throw Error("Ahem. Somehow the global routing algorithm didn't manage to connect some nets even when allowing overflows\n");
         mul *= 1.5f;
+        ++i;
     }
+    cmess2 << "Global routing completed" << std::endl;
 }
 
 void SpaghettiEngine::saveRoutingSolution () const
@@ -253,7 +272,7 @@ std::vector<DbU::Unit> SpaghettiEngine::getVerticalCutLines     () const
     return ret;
 }
 
-DbU::Unit     SpaghettiEngine::getHorizontalCut        ( unsigned y ) const
+DbU::Unit SpaghettiEngine::getHorizontalCut ( unsigned y ) const
 {
     if(!_routingGrid)
         throw Error("The global routing graph hasn't been initialized yet\n");
@@ -265,7 +284,7 @@ DbU::Unit     SpaghettiEngine::getHorizontalCut        ( unsigned y ) const
         / ydim;
 }
 
-DbU::Unit     SpaghettiEngine::getVerticalCut          ( unsigned x ) const
+DbU::Unit SpaghettiEngine::getVerticalCut   ( unsigned x ) const
 {
     if(!_routingGrid)
         throw Error("The global routing graph hasn't been initialized yet\n");
@@ -275,6 +294,26 @@ DbU::Unit     SpaghettiEngine::getVerticalCut          ( unsigned x ) const
         ( box.getXMin() * static_cast<std::int64_t>(xdim - x)
         + box.getXMax() * static_cast<std::int64_t>(x) )
         / xdim;
+}
+
+unsigned SpaghettiEngine::getGridX ( DbU::Unit x ) const
+{
+    if(!_routingGrid)
+        throw Error("The global routing graph hasn't been initialized yet\n");
+    unsigned xdim = _routingGrid->getXDim();
+    auto box = getCell()->getBoundingBox();
+    unsigned ret = (( x - box.getXMin() ) * xdim ) / box.getWidth();
+    return ret;
+}
+
+unsigned SpaghettiEngine::getGridY ( DbU::Unit y ) const
+{
+    if(!_routingGrid)
+        throw Error("The global routing graph hasn't been initialized yet\n");
+    unsigned ydim = _routingGrid->getYDim();
+    auto box = getCell()->getBoundingBox();
+    unsigned ret = (( y - box.getYMin() ) * ydim ) / box.getHeight();
+    return ret;
 }
 
 } // End namespace spaghetti

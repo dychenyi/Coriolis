@@ -72,6 +72,7 @@ class SpaghettiEngine : public CRL::ToolEngine {
            void          initGlobalRouting       ( const std::map<Hurricane::Name,Hurricane::Net*>& excludedNets );
            void          run                     ( const std::map<Hurricane::Name,Hurricane::Net*>& excludedNets );
            void          saveRoutingSolution     () const;
+           void          outputStats             () const;
 
   BidimensionalGrid*     getRoutingGrid          () const { return _routingGrid; }
 
@@ -80,6 +81,10 @@ class SpaghettiEngine : public CRL::ToolEngine {
 
            DbU::Unit     getVerticalCut          ( unsigned x ) const;
            DbU::Unit     getHorizontalCut        ( unsigned y ) const;
+
+           unsigned      getGridX                ( DbU::Unit x ) const;
+           unsigned      getGridY                ( DbU::Unit y ) const;
+
 // Others
 // ******
     public:
