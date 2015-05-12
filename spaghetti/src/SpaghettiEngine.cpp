@@ -154,11 +154,18 @@ void SpaghettiEngine::createRoutingGraph ( Capacity hreserved, Capacity vreserve
 
 void SpaghettiEngine::initGlobalRouting ( const std::map<Hurricane::Name,Hurricane::Net*>& excludedNets )
 {
-
+    if(!_routingGrid)
+        throw Error("SpaghettiEngine::initGlobalRouting(): the routing grid hasn't been initialized\n");
+    
 }
 
 void SpaghettiEngine::run ( const std::map<Hurricane::Name,Hurricane::Net*>& excludedNets )
 {
+}
+
+void SpaghettiEngine::saveRoutingSolution () const
+{
+    
 }
 
 std::vector<DbU::Unit> SpaghettiEngine::getHorizontalCutLines   () const

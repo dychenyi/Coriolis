@@ -45,6 +45,7 @@
 #include "kite/KiteEngine.h"
 #include "kite/PyKiteEngine.h"
 #include "spaghetti/SpaghettiEngine.h"
+#include "spaghetti/Grid.h"
 
 namespace Kite {
 
@@ -320,6 +321,39 @@ namespace Kite {
       size_t           coreReserved   = 0;
       size_t           coronaReserved = 4;
 
+      unsigned xdim = _globalRouter->getRoutingGrid()->getXDim();
+      unsigned ydim = _globalRouter->getRoutingGrid()->getYDim();
+
+      // VEdges
+      for(unsigned x=0; x<xdim; ++x){
+        for(unsigned y=0; y+1<ydim; ++y){
+          DbU::Unit midX = (_globalRouter->getVerticalCut(x) + _globalRouter->getVerticalCut(x+1))/2;
+          auto bb = Box(
+            midX,
+            _globalRouter->getHorizontalCut(y),
+            midX,
+            _globalRouter->getHorizontalCut(y+1)
+          );
+          if (chipTools.hPadsEnclosed(bb)) {
+            _globalRouter->getRoutingGrid()->getVerticalEdge(x, y).capacity = 0;
+          }
+        }
+      }
+      // HEdges
+      for(unsigned y=0; y<ydim; ++y){
+        for(unsigned x=0; x+1<xdim; ++x){
+          DbU::Unit midY = (_globalRouter->getHorizontalCut(y) + _globalRouter->getHorizontalCut(y+1))/2;
+          auto bb = Box(
+            _globalRouter->getVerticalCut(x),
+            midY,
+            _globalRouter->getVerticalCut(x+1),
+            midY
+          );
+          if (chipTools.hPadsEnclosed(bb)) {
+            _globalRouter->getRoutingGrid()->getHorizontalEdge(x, y).capacity = 0;
+          }
+        }
+      }
       // TODO: create the edges
       /*  
       forEach ( Knik::Vertex*, ivertex, _knik->getRoutingGraph()->getVertexes() ) {
