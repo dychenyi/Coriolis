@@ -1,7 +1,6 @@
 
 #include "hurricane/Error.h"
 #include "hurricane/Component.h"
-#include "hurricane/Segment.h"
 #include "hurricane/Net.h"
 #include "hurricane/DeepNet.h"
 #include "hurricane/Cell.h"
@@ -9,6 +8,10 @@
 #include "hurricane/DataBase.h"
 #include "hurricane/UpdateSession.h"
 #include "hurricane/NetRoutingProperty.h"
+
+#include "hurricane/Segment.h"
+#include "hurricane/Horizontal.h"
+#include "hurricane/Vertical.h"
 
 #include "crlcore/Utilities.h"
 #include "crlcore/AllianceFramework.h"
@@ -196,17 +199,19 @@ void SpaghettiEngine::initGlobalRouting ( const std::map<Hurricane::Name,Hurrica
       CNet newNet; newNet.demand = 1; newNet.cost = 1.0;
       // TODO: Now add all existing segments to the initial components
       for_each_component ( component, inet->getComponents() ) {
-        if ( dynamic_cast<RoutingPad*>(component) ){
+        if ( dynamic_cast<RoutingPad*>(component) or dynamic_cast<Segment*>(component) ){
             newNet.components.emplace_back();
-            Box cur = dynamic_cast<RoutingPad*>(component)->getBoundingBox();
+            Box cur;
+            if( dynamic_cast<RoutingPad*>(component) ) cur = dynamic_cast<RoutingPad*>(component)->getBoundingBox();
+            else if( dynamic_cast<Horizontal*>(component) ) cur = dynamic_cast<Horizontal*>(component)->getBoundingBox();
+            else if( dynamic_cast<Vertical*>(component) ) cur = dynamic_cast<Vertical*>(component)->getBoundingBox();
+            else throw Error("The Segment is neither Horizontal nor Vertical\n");
+
             for(unsigned x=getGridX(cur.getXMin()); x<=getGridX(cur.getXMax()); ++x){
                 for(unsigned y=getGridY(cur.getYMin()); y<=getGridY(cur.getYMax()); ++y){
                     newNet.components.back().push_back(PlanarCoord(x, y));
                 }
             }
-        }
-        else if ( dynamic_cast<Segment*>(component) ){
-            //cerr << Error("In net <%s>: found <%s> before routing\n", inet->_getString().c_str(), component->_getString().c_str()) << endl;
         }
         else if ( dynamic_cast<Contact*>(component) ) {
             //cerr << Error("In net <%s>: found <%s> before routing\n", inet->_getString().c_str(), component->_getString().c_str()) << endl;
