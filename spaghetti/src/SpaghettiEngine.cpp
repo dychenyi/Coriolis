@@ -200,30 +200,22 @@ void SpaghettiEngine::initGlobalRouting ( const std::map<Hurricane::Name,Hurrica
 
       CNet newNet; newNet.demand = 1; newNet.cost = 1.0;
       // TODO: Now add all existing segments to the initial components
-      for_each_component ( component, inet->getComponents() ) {
-        if ( dynamic_cast<RoutingPad*>(component) or dynamic_cast<Segment*>(component) ){
+      forEach ( Component*, icomp, inet->getComponents() ) {
+        if( dynamic_cast<RoutingPad*>(*icomp) ){
             newNet.components.emplace_back();
-            Box cur;
-            if( dynamic_cast<Horizontal *>(component) ) cur = dynamic_cast<Horizontal*>(component)->getBoundingBox();
-       else if( dynamic_cast<Vertical   *>(component) ) cur = dynamic_cast<Vertical*>(component)->getBoundingBox();
-       else if( dynamic_cast<RoutingPad *>(component) ) continue; //cur = dynamic_cast<RoutingPad*>(component)->getBoundingBox();
-       else throw Error("The Segment is neither Horizontal nor Vertical\n");
-
+            // Bounding box or center?
+            Box cur = dynamic_cast<RoutingPad*>(*icomp)->getBoundingBox();
             for(unsigned x=getGridX(cur.getXMin()); x<=getGridX(cur.getXMax()); ++x){
                 for(unsigned y=getGridY(cur.getYMin()); y<=getGridY(cur.getYMax()); ++y){
                     newNet.components.back().push_back(PlanarCoord(x, y));
                 }
             }
         }
-        else if ( dynamic_cast<Contact*>(component) ) {
-            //cerr << Error("In net <%s>: found <%s> before routing\n", inet->_getString().c_str(), component->_getString().c_str()) << endl;
-            /*if ( isAGlobalRoutingContact ( contact ) )
-                vContacts.push_back ( contact ); */
+        else{ // Nothing happens yet, but maybe we could handle useful segments
+
         }
-        end_for;
       }
       _routingGrid->pushNet(newNet);
-
     }
 }
 
