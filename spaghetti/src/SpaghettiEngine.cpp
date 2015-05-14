@@ -204,17 +204,22 @@ void SpaghettiEngine::initGlobalRouting ( const std::map<Hurricane::Name,Hurrica
         if( dynamic_cast<RoutingPad*>(*icomp) ){
             newNet.components.emplace_back();
             // Bounding box or center?
+            Point cur = dynamic_cast<RoutingPad*>(*icomp)->getCenter();
+            newNet.components.back().emplace_back(getGridX(cur.getX()), getGridY(cur.getY()));
+            /*
             Box cur = dynamic_cast<RoutingPad*>(*icomp)->getBoundingBox();
             for(unsigned x=getGridX(cur.getXMin()); x<=getGridX(cur.getXMax()); ++x){
                 for(unsigned y=getGridY(cur.getYMin()); y<=getGridY(cur.getYMax()); ++y){
                     newNet.components.back().push_back(PlanarCoord(x, y));
                 }
             }
+            */
         }
         else{ // Nothing happens yet, but maybe we could handle useful segments
 
         }
       }
+      _grNets.push_back(*inet);
       _routingGrid->pushNet(newNet);
     }
 }
@@ -250,6 +255,9 @@ void SpaghettiEngine::saveRoutingSolution () const
 {
     // TODO: for each net, add all edges in the routing grid to the corresponding nets, create contacts    
     // For each net, find the bounding boxes of all segments and routing pads; find connected groups of segments and routing pads
+    for(size_t i=0; i<_grNets.size(); ++i){
+        
+    }
     // Find their positions on the grid and connect them physically if they are in the same grid cell
     // Then create contacts for each turn and connexion to the initial segments; materialize the segments between them
 }

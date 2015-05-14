@@ -312,8 +312,8 @@ namespace Kite {
       _globalRouter->setRoutingGauge( getConfiguration()->getRoutingGauge() );
       _globalRouter->setAllowedDepth( getConfiguration()->getAllowedDepth() );
       _globalRouter->createRoutingGraph(
-          getHTracksReservedLocal(),
-          getVTracksReservedLocal(),
+          0, //getHTracksReservedLocal(),
+          0, //getVTracksReservedLocal(),
           3.0,
           0.5
         );
@@ -336,8 +336,17 @@ namespace Kite {
             midX,
             _globalRouter->getHorizontalCut(y+1)
           );
-          if (chipTools.hPadsEnclosed(bb)) {
-            _globalRouter->getRoutingGrid()->getVerticalEdge(x, y).capacity = 0;
+          spaghetti::Capacity & edgecap = _globalRouter->getRoutingGrid()->getVerticalEdge(x, y).capacity;
+          if (chipTools.vPadsEnclosed(bb)) {
+            edgecap = 0;
+          }
+          else{
+            spaghetti::Capacity edgeReserved = 0;
+            if (chipTools.getCorona().getInnerBox().contains(bb))
+              edgeReserved = getVTracksReservedLocal();
+            else if (chipTools.getCorona().getOuterBox().contains(bb))
+              edgeReserved = coronaReserved;
+            edgecap = (edgecap>edgeReserved) ? (edgecap-edgeReserved) : 0;
           }
         }
       }
@@ -351,8 +360,17 @@ namespace Kite {
             _globalRouter->getVerticalCut(x+1),
             midY
           );
+          spaghetti::Capacity & edgecap = _globalRouter->getRoutingGrid()->getHorizontalEdge(x, y).capacity;
           if (chipTools.hPadsEnclosed(bb)) {
-            _globalRouter->getRoutingGrid()->getHorizontalEdge(x, y).capacity = 0;
+            edgecap = 0;
+          }
+          else{
+            spaghetti::Capacity edgeReserved = 0;
+            if (chipTools.getCorona().getInnerBox().contains(bb))
+              edgeReserved = getHTracksReservedLocal();
+            else if (chipTools.getCorona().getOuterBox().contains(bb))
+              edgeReserved = coronaReserved;
+            edgecap = (edgecap>edgeReserved) ? (edgecap-edgeReserved) : 0;
           }
         }
       }
@@ -487,13 +505,9 @@ namespace Kite {
             while ( gcell and (gcell != end) ) {
               right = gcell->getRight();
               if (right == NULL) break;
-              /* TODO
-              _knik->increaseEdgeCapacity( gcell->getColumn()
-                                         , gcell->getRow()
-                                         , right->getColumn()
-                                         , right->getRow()
-                                         , elementCapacity );
-              */
+              _globalRouter->getRoutingGrid()->getHorizontalEdge(gcell->getRow(), gcell->getColumn()).capacity += elementCapacity;
+              assert(right->getColumn() == gcell->getColumn()+1);
+              assert(right->getRow() == gcell->getRow());
               gcell = right;
             }
           }
@@ -525,14 +539,10 @@ namespace Kite {
             while ( gcell and (gcell != end) ) {
               up = gcell->getUp();
               if (up == NULL) break;
-              /* TODO
-              _knik->increaseEdgeCapacity( gcell->getColumn()
-                                         , gcell->getRow()
-                                         , up->getColumn()
-                                         , up->getRow()
-                                         , elementCapacity );
+              _globalRouter->getRoutingGrid()->getVerticalEdge(gcell->getRow(), gcell->getColumn()).capacity += elementCapacity;
+              assert(right->getColumn() == gcell->getColumn());
+              assert(right->getRow() == gcell->getRow()+1);
               gcell = up;
-              */
             }
           }
         }

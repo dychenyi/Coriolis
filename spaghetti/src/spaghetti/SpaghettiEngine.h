@@ -46,8 +46,8 @@ class SpaghettiEngine : public CRL::ToolEngine {
         RoutingGauge*        _routingGauge;
         unsigned int         _allowedDepth;
 
-        BidimensionalGrid*   _routingGrid;
-
+        BidimensionalGrid*            _routingGrid;
+        std::vector<Hurricane::Net*>  _grNets;
 // Constructors & Destructors
 // **************************
     protected:
