@@ -1,5 +1,6 @@
 
 #include "hurricane/Error.h"
+#include "hurricane/Warning.h"
 #include "hurricane/Component.h"
 #include "hurricane/RoutingPad.h"
 #include "hurricane/Net.h"
@@ -9,6 +10,7 @@
 #include "hurricane/DataBase.h"
 #include "hurricane/UpdateSession.h"
 #include "hurricane/Property.h"
+#include "hurricane/Contact.h"
 #include "hurricane/NetRoutingProperty.h"
 
 #include "hurricane/Segment.h"
@@ -28,12 +30,59 @@
 #include "spaghetti/CostFunctions.h"
 
 #include <sstream>
+#include <unordered_set>
+#include <unordered_map>
 
 namespace spaghetti{
 
 using Hurricane::Error;
 
 const Hurricane::Name SpaghettiEngine::_toolName           = "spaghetti::SpaghettiEngine";
+
+namespace{
+    using namespace Hurricane;
+    using namespace std;
+
+    Hurricane::Layer const * getGMetalH(){
+      DataBase*   db         = DataBase::getDB ();
+      Technology* technology = db->getTechnology ();
+
+      const Layer* gMetalH = technology->getLayer("gmetalh");
+      if ( !gMetalH ) {
+        cerr << Warning("Knik::Configuration() - No \"gmetalh\" in technology, falling back to \"metal2\".") << endl;
+        gMetalH = technology->getLayer("metal2");
+        if ( !gMetalH )
+          throw Error("Knik::Configuration() - No \"gmetalh\" nor \"metal2\" in technology.");
+      }
+      return gMetalH;
+    }
+    Hurricane::Layer const * getGMetalV(){
+      DataBase*   db         = DataBase::getDB ();
+      Technology* technology = db->getTechnology ();
+
+      const Layer* gMetalV = technology->getLayer("gmetalv");
+      if ( !gMetalV ) {
+        cerr << Warning("Knik::Configuration() - No \"gmetalv\" in technology, falling back to \"metal3\".") << endl;
+        gMetalV = technology->getLayer("metal3");
+        if ( !gMetalV )
+          throw Error("Knik::Configuration() - No \"gmetalv\" nor \"metal3\" in technology.");
+      }
+      return gMetalV;
+    }
+    Hurricane::Layer const * getGContact(){
+      DataBase*   db         = DataBase::getDB ();
+      Technology* technology = db->getTechnology ();
+
+      const Layer* gContact = technology->getLayer("gcontact");
+      if ( !gContact ) {
+        cerr << Warning("Knik::Configuration() - No \"gcontact\" in technology, falling back to \"VIA23\".") << endl;
+        gContact = technology->getLayer("VIA23");
+        if ( !gContact )
+          throw Error("Knik::Configuration() - No \"gmetalh\" nor \"VIA23\" in technology.");
+      }
+      return gContact;
+    }
+}
 
 SpaghettiEngine::SpaghettiEngine ( Cell* cell )
     : CRL::ToolEngine  ( cell )
@@ -200,24 +249,19 @@ void SpaghettiEngine::initGlobalRouting ( const std::map<Hurricane::Name,Hurrica
 
       CNet newNet; newNet.demand = 1; newNet.cost = 1.0;
       // TODO: Now add all existing segments to the initial components
-      forEach ( Component*, icomp, inet->getComponents() ) {
-        if( dynamic_cast<RoutingPad*>(*icomp) ){
-            newNet.components.emplace_back();
-            // Bounding box or center?
-            Point cur = dynamic_cast<RoutingPad*>(*icomp)->getCenter();
-            newNet.components.back().emplace_back(getGridX(cur.getX()), getGridY(cur.getY()));
-            /*
-            Box cur = dynamic_cast<RoutingPad*>(*icomp)->getBoundingBox();
-            for(unsigned x=getGridX(cur.getXMin()); x<=getGridX(cur.getXMax()); ++x){
-                for(unsigned y=getGridY(cur.getYMin()); y<=getGridY(cur.getYMax()); ++y){
-                    newNet.components.back().push_back(PlanarCoord(x, y));
-                }
+      forEach ( RoutingPad*, ipad, inet->getRoutingPads() ) {
+        newNet.components.emplace_back();
+        // Bounding box or center?
+        Point cur = ipad->getCenter();
+        newNet.components.back().emplace_back(getGridX(cur.getX()), getGridY(cur.getY()));
+        /*
+        Box cur = ipad->getBoundingBox();
+        for(unsigned x=getGridX(cur.getXMin()); x<=getGridX(cur.getXMax()); ++x){
+            for(unsigned y=getGridY(cur.getYMin()); y<=getGridY(cur.getYMax()); ++y){
+                newNet.components.back().push_back(PlanarCoord(x, y));
             }
-            */
         }
-        else{ // Nothing happens yet, but maybe we could handle useful segments
-
-        }
+        */
       }
       _grNets.push_back(*inet);
       _routingGrid->pushNet(newNet);
@@ -253,13 +297,68 @@ void SpaghettiEngine::run ( const std::map<Hurricane::Name,Hurricane::Net*>& exc
 
 void SpaghettiEngine::saveRoutingSolution () const
 {
-    // TODO: for each net, add all edges in the routing grid to the corresponding nets, create contacts    
-    // For each net, find the bounding boxes of all segments and routing pads; find connected groups of segments and routing pads
+    using namespace Hurricane;
+
+    std::vector<RoutedCNet> prunedRoutes = _routingGrid->getPrunedRouting();
+    assert(prunedRoutes.size() == _grNets.size());
+
     for(size_t i=0; i<_grNets.size(); ++i){
-        
+      std::unordered_set<VertexIndex> contactPos;
+      for(auto const & comp : prunedRoutes[i].components)
+        for(PlanarCoord c : comp)
+          contactPos.emplace(getRepr(c.x, c.y));
+      for(auto e : prunedRoutes[i].routing){
+        contactPos.emplace(getRepr( e.first.x, e.first.y ));
+        contactPos.emplace(getRepr( e.second.x, e.second.y ));
+      }
+
+      DbU::Unit epsilon = DbU::lambda(2);
+
+      // Create the contacts where we need it
+      std::unordered_map<VertexIndex, Contact*> contacts;
+      for(VertexIndex v : contactPos){
+        PlanarCoord c = _routingGrid->getCoord(v);
+        DbU::Unit contactX = (getVerticalCut(c.x)   + getVerticalCut(c.x+1))/2,
+                  contactY = (getHorizontalCut(c.y) + getHorizontalCut(c.y+1))/2;
+        DbU::Unit wX = getVerticalCut(c.x+1)   - getVerticalCut(c.x),
+                  wY = getHorizontalCut(c.y+1) - getHorizontalCut(c.y);
+        contacts[v] = Contact::create(
+              _grNets[i]
+            , DataBase::getDB()->getTechnology()->getLayer("metal2")
+            , contactX
+            , contactY
+            , wX 
+            , wY
+        );
+      }
+      // Create the segments associated with the contacts
+      for(auto e : prunedRoutes[i].routing){
+        PlanarCoord e1 = e.first, e2 = e.second;
+        VertexIndex v1 = getRepr(e1.x, e1.y),
+                    v2 = getRepr(e2.x, e2.y);
+        Contact* c1 = contacts.at(v1);
+        Contact* c2 = contacts.at(v2);
+        if(e1.x == e2.x)
+          if ( e1.y <= e2.y )
+            Vertical::create ( c1, c2, getGMetalV(), c1->getX(), epsilon );
+          else
+            Vertical::create ( c2, c1, getGMetalV(), c1->getX(), epsilon );
+        else if(e1.y == e2.y)
+          if ( e1.x <= e2.x )
+            Horizontal::create ( c1, c2, getGMetalH(), c1->getY(), epsilon );
+          else
+            Horizontal::create ( c2, c1, getGMetalH(), c1->getY(), epsilon );
+        else throw Error("The segment is neither horizontal nor vertical\n");
+      }
+      // Get the pads associated with each vertex of the grid
+      std::vector<std::pair<VertexIndex, RoutingPad*> > pads;
+      forEach ( RoutingPad*, ipad, _grNets[i]->getRoutingPads() ) {
+        Point cur = dynamic_cast<RoutingPad*>(*ipad)->getCenter();
+        Contact* c = contacts.at(getRepr(getGridX(cur.getX()), getGridY(cur.getY())));
+        ipad->getBodyHook()->detach();
+        ipad->getBodyHook()->attach(c->getBodyHook());
+      }
     }
-    // Find their positions on the grid and connect them physically if they are in the same grid cell
-    // Then create contacts for each turn and connexion to the initial segments; materialize the segments between them
 }
 
 void SpaghettiEngine::outputStats () const
@@ -350,6 +449,11 @@ unsigned SpaghettiEngine::getGridY ( DbU::Unit y ) const
     unsigned ret = (( y - box.getYMin() ) * ydim ) / box.getHeight();
     return ret;
 }
+
+VertexIndex SpaghettiEngine::getRepr ( unsigned x, unsigned y ) const{
+    return _routingGrid->getVertexRepr(x, y);
+}
+
 
 } // End namespace spaghetti
 

@@ -24,10 +24,16 @@ struct VolumeCoord{
 
 struct CNet : NetProperties{
     std::vector<std::vector<PlanarCoord> > components;
+
+    CNet() : NetProperties() {}
+    CNet(NetProperties n) : NetProperties(n) {}
 };
 
 struct RoutedCNet : CNet{
     std::vector<std::pair<PlanarCoord, PlanarCoord> > routing;
+
+    RoutedCNet() : CNet() {}
+    RoutedCNet(NetProperties n) : CNet(n) {}
 };
 
 class BidimensionalGrid : public RoutableGraph{
@@ -45,8 +51,6 @@ class BidimensionalGrid : public RoutableGraph{
     EdgeIndex getTurnEdgeIndex        ( unsigned x, unsigned y ) const;
     EdgeIndex getHorizontalEdgeIndex  ( unsigned x, unsigned y ) const;
     EdgeIndex getVerticalEdgeIndex    ( unsigned x, unsigned y ) const;
-
-    GridCoord getCoord(VertexIndex v) const;
 
     VertexIndex getHorizontalVertexIndex ( unsigned x, unsigned y ) const;
     VertexIndex getVerticalVertexIndex   ( unsigned x, unsigned y ) const;
@@ -66,14 +70,24 @@ class BidimensionalGrid : public RoutableGraph{
     EdgeProperties       & getHorizontalEdge  ( unsigned x, unsigned y );
     EdgeProperties       & getVerticalEdge    ( unsigned x, unsigned y );
 
+    bool isTurnEdge       ( EdgeIndex e ) const;
+    bool isHorizontalEdge ( EdgeIndex e ) const;
+    bool isVerticalEdge   ( EdgeIndex e ) const;
+
     // Routing using 2D-aware algorithms
     void steinerRoute ( EdgeCostFunction );
 
     // Get the results
-    std::vector<RoutedCNet> getRouting() const;
+    std::vector<RoutedCNet> getRouting       () const;
+    std::vector<RoutedCNet> getPrunedRouting () const;
 
     unsigned getXDim() const{ return xdim; }
     unsigned getYDim() const{ return ydim; }
+
+    VertexIndex getVertexRepr( unsigned x, unsigned y ) const { return getHorizontalVertexIndex(x, y); }
+    VertexIndex getVertexRepr( PlanarCoord c )          const { return getVertexRepr(c.x, c.y); }
+    VertexIndex getVertexRepr( VertexIndex v )          const { return v > xdim*ydim ? v - xdim*ydim : v; }
+    GridCoord   getCoord     ( VertexIndex v )          const;
 
     Cost avgHCost            ( EdgeEvalFunction ) const;
     Cost maxHCost            ( EdgeEvalFunction ) const;

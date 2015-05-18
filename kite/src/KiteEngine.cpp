@@ -319,9 +319,8 @@ namespace Kite {
         );
   
     // Decrease the edge's capacity only under the core area.
-      const ChipTools& chipTools      = getChipTools();
-      size_t           coreReserved   = 0;
-      size_t           coronaReserved = 4;
+      const ChipTools&    chipTools      = getChipTools();
+      spaghetti::Capacity coronaReserved = 4;
 
       unsigned xdim = _globalRouter->getRoutingGrid()->getXDim();
       unsigned ydim = _globalRouter->getRoutingGrid()->getYDim();

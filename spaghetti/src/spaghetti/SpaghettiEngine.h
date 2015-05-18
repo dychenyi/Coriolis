@@ -86,6 +86,8 @@ class SpaghettiEngine : public CRL::ToolEngine {
            unsigned      getGridX                ( DbU::Unit x ) const;
            unsigned      getGridY                ( DbU::Unit y ) const;
 
+           VertexIndex   getRepr                 ( unsigned x, unsigned y ) const;
+
 // Others
 // ******
     public:

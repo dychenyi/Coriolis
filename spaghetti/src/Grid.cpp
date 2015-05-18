@@ -1,8 +1,10 @@
 
 #include "spaghetti/Grid.h"
+#include "spaghetti/UnionFindMap.h"
 
 #include <cassert>
 #include <cmath>
+#include <unordered_set>
 
 namespace spaghetti{
 
@@ -119,6 +121,16 @@ EdgeProperties & BidimensionalGrid::getVerticalEdge    ( unsigned x, unsigned y 
     return edges[getVerticalEdgeIndex(x, y)];
 }
 
+bool BidimensionalGrid::isTurnEdge       ( EdgeIndex e ) const{
+    return e < xdim * ydim;
+}
+bool BidimensionalGrid::isHorizontalEdge ( EdgeIndex e ) const{
+    return e >= (2*xdim-1)*ydim;
+}
+bool BidimensionalGrid::isVerticalEdge   ( EdgeIndex e ) const{
+    return (not isTurnEdge(e)) and (not isHorizontalEdge(e));
+}
+
 BidimensionalGrid::GridCoord BidimensionalGrid::getCoord(VertexIndex v) const{
     if(v >= xdim * ydim)
         v -= xdim*ydim;
@@ -128,7 +140,7 @@ BidimensionalGrid::GridCoord BidimensionalGrid::getCoord(VertexIndex v) const{
 std::vector<RoutedCNet> BidimensionalGrid::getRouting() const{
     std::vector<RoutedCNet> ret;
     for(auto const & n : nets){
-        RoutedCNet cur;
+        RoutedCNet cur(static_cast<NetProperties>(n));
         for(auto const & comp : n.initialComponents){
             std::vector<PlanarCoord> newComp;
             for(VertexIndex v : comp)
@@ -136,11 +148,75 @@ std::vector<RoutedCNet> BidimensionalGrid::getRouting() const{
             cur.components.push_back(newComp);
         }
         for(EdgeIndex e : n.routing){
-            cur.routing.emplace_back(getCoord(edges[e].vertices[0]), getCoord(edges[e].vertices[1]));
+            if(not isTurnEdge(e))
+                cur.routing.emplace_back(getCoord(edges[e].vertices[0]), getCoord(edges[e].vertices[1]));
         }
         ret.push_back(cur);
     }
     return ret;
+}
+
+std::vector<RoutedCNet> BidimensionalGrid::getPrunedRouting() const{
+    std::vector<RoutedCNet> ret;
+    for(auto const & n : nets){
+        RoutedCNet cur(static_cast<NetProperties>(n));
+
+        // Get all vertices corresponding to contacts
+        std::unordered_set<VertexIndex> contactVertices;
+        std::unordered_set<EdgeIndex> allEdges(n.routing.begin(), n.routing.end());
+
+        for(auto const & comp : n.initialComponents){
+            cur.components.emplace_back();
+            for(VertexIndex v : comp){
+                cur.components.back().push_back(getCoord(v));
+                contactVertices.emplace(v);
+            }
+        }
+
+        // Get all vertices corresponding to turns, which are contacts as well
+        for(EdgeIndex e : n.routing){
+            if(isTurnEdge(e))
+               contactVertices.emplace(getVertexRepr(edges[e].vertices[0]));
+        }
+
+        // Find groups of edges connected by non-contact vertices
+        UnionFindMap<EdgeIndex> uf;
+        for(EdgeIndex e : n.routing){
+            if(isTurnEdge(e)) continue;
+
+            uf.find(e); // Add to the UF set
+            for(VertexIndex v : edges[e].vertices){
+                if(contactVertices.count(v) == 0){ // The vertex is not a contact
+                    for(EdgeIndex ec : vertices[v].edges){
+                        if(allEdges.count(ec) != 0){ // This other edge is used by the net too
+                            uf.merge(e, ec);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Get the groups of edges on the grid that can be rearranged into a single straight edge
+        for(std::vector<EdgeIndex> const & finalEdge : uf.getConnectedComponents()){
+            PlanarCoord min(std::numeric_limits<unsigned>::max(), std::numeric_limits<unsigned>::max()),
+                        max(0, 0);
+            assert(not finalEdge.empty());
+            for(EdgeIndex e : finalEdge){
+                PlanarCoord f = getCoord(edges[e].vertices[0]),
+                            s = getCoord(edges[e].vertices[1]);
+                PlanarCoord tmpmin(std::min(f.x, s.x), std::min(f.y, s.y));
+                PlanarCoord tmpmax(std::max(f.x, s.x), std::max(f.y, s.y));
+                max.x = std::max(max.x, tmpmax.x); max.y = std::max(max.y, tmpmax.y);
+                min.x = std::min(min.x, tmpmin.x); min.y = std::min(min.y, tmpmin.y);
+            }
+            assert(min.x == max.x or min.y == max.y);
+            cur.routing.emplace_back(min, max);
+        }
+
+        ret.push_back(cur);
+    }
+    return ret;
+
 }
 
 Cost BidimensionalGrid::avgHCost   ( EdgeEvalFunction edgeEvalFunction ) const{
