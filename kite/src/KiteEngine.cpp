@@ -539,8 +539,8 @@ namespace Kite {
               up = gcell->getUp();
               if (up == NULL) break;
               _globalRouter->getRoutingGrid()->getVerticalEdge(gcell->getRow(), gcell->getColumn()).capacity += elementCapacity;
-              assert(right->getColumn() == gcell->getColumn());
-              assert(right->getRow() == gcell->getRow()+1);
+              assert(up->getColumn() == gcell->getColumn());
+              assert(up->getRow() == gcell->getRow()+1);
               gcell = up;
             }
           }
@@ -569,7 +569,7 @@ namespace Kite {
       }
       _globalRouter->run( preRouteds );
     }
-
+    _globalRouter->saveRoutingSolution();
     setState( Katabatic::EngineGlobalLoaded );
 
     Session::close();

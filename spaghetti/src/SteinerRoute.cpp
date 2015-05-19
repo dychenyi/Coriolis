@@ -95,12 +95,10 @@ void BidimensionalGrid::steinerRouteNet ( EdgeCostFunction edgeCostFunction, Net
     std::sort(toRoute.begin(), toRoute.end());
     toRoute.resize(std::distance(toRoute.begin(), std::unique(toRoute.begin(), toRoute.end())));
 
-    // Third, potentially cleanup the routing: remove edges redundancy due to non-ponctual components
-    // TODO
     for(EdgeIndex e : toRoute){
-        // TODO: Verify that the edge does not link two vertices from the same component
         routeEdge(e, n);
     }
+    // Cleanup the routing: remove edges redundancy due to non-ponctual components
     unrouteUnusedEdges(n);
 }
 

@@ -1,6 +1,7 @@
 
 #include "spaghetti/Grid.h"
 #include "spaghetti/UnionFindMap.h"
+#include "hurricane/Error.h"
 
 #include <cassert>
 #include <cmath>
@@ -159,26 +160,47 @@ std::vector<RoutedCNet> BidimensionalGrid::getRouting() const{
 std::vector<RoutedCNet> BidimensionalGrid::getPrunedRouting() const{
     std::vector<RoutedCNet> ret;
     for(auto const & n : nets){
+        if(not isNetClean(n))
+            throw Hurricane::Error("The net still has dangling edges\n");
+
         RoutedCNet cur(static_cast<NetProperties>(n));
 
         // Get all vertices corresponding to contacts
-        std::unordered_set<VertexIndex> contactVertices;
-        std::unordered_set<EdgeIndex> allEdges(n.routing.begin(), n.routing.end());
-
+        std::unordered_set<VertexIndex> contactVertices, HVertices, VVertices, TVertices;
         for(auto const & comp : n.initialComponents){
             cur.components.emplace_back();
             for(VertexIndex v : comp){
                 cur.components.back().push_back(getCoord(v));
-                contactVertices.emplace(v);
+                contactVertices.emplace(getVertexRepr(v));
             }
         }
 
         // Get all vertices corresponding to turns, which are contacts as well
         for(EdgeIndex e : n.routing){
-            if(isTurnEdge(e))
-               contactVertices.emplace(getVertexRepr(edges[e].vertices[0]));
+            VertexIndex r1 = getVertexRepr(edges[e].vertices[0]),
+                        r2 = getVertexRepr(edges[e].vertices[1]);
+            if(isTurnEdge(e)){
+                assert(r1 == r2);
+                contactVertices.emplace(r1);
+                TVertices.emplace(r1);
+                TVertices.emplace(r2);
+            }
+            if(isHorizontalEdge(e)){
+                HVertices.emplace(r1);
+                HVertices.emplace(r2);
+            }
+            if(isVerticalEdge(e)){
+                VVertices.emplace(r1);
+                VVertices.emplace(r2);
+            }
+        }
+        // contactVertices are those that are at a turn or at a routing pad
+        for(VertexIndex v : HVertices){
+            if(VVertices.count(v) != 0)
+                contactVertices.emplace(v);
         }
 
+        std::unordered_set<EdgeIndex> const allEdges(n.routing.begin(), n.routing.end());
         // Find groups of edges connected by non-contact vertices
         UnionFindMap<EdgeIndex> uf;
         for(EdgeIndex e : n.routing){
@@ -186,9 +208,9 @@ std::vector<RoutedCNet> BidimensionalGrid::getPrunedRouting() const{
 
             uf.find(e); // Add to the UF set
             for(VertexIndex v : edges[e].vertices){
-                if(contactVertices.count(v) == 0){ // The vertex is not a contact
+                if(contactVertices.count(getVertexRepr(v)) == 0){ // The vertex is not a contact
                     for(EdgeIndex ec : vertices[v].edges){
-                        if(allEdges.count(ec) != 0){ // This other edge is used by the net too
+                        if(ec != nullEdgeIndex and !isTurnEdge(ec) and allEdges.count(ec) != 0){ // This other edge is used by the net too
                             uf.merge(e, ec);
                         }
                     }
@@ -204,12 +226,15 @@ std::vector<RoutedCNet> BidimensionalGrid::getPrunedRouting() const{
             for(EdgeIndex e : finalEdge){
                 PlanarCoord f = getCoord(edges[e].vertices[0]),
                             s = getCoord(edges[e].vertices[1]);
+                assert(f.x == s.x or f.y == s.y);
+                assert(f.x != s.x or f.y != s.y);
                 PlanarCoord tmpmin(std::min(f.x, s.x), std::min(f.y, s.y));
                 PlanarCoord tmpmax(std::max(f.x, s.x), std::max(f.y, s.y));
                 max.x = std::max(max.x, tmpmax.x); max.y = std::max(max.y, tmpmax.y);
                 min.x = std::min(min.x, tmpmin.x); min.y = std::min(min.y, tmpmin.y);
             }
             assert(min.x == max.x or min.y == max.y);
+            assert(min.x != max.x or min.y != max.y);
             cur.routing.emplace_back(min, max);
         }
 
@@ -312,7 +337,30 @@ Cost BidimensionalGrid::qAvgTCost  ( EdgeEvalFunction edgeEvalFunction ) const{
     else                  return std::sqrt(tot/(xdim*ydim));
 }
 
+void BidimensionalGrid::selfcheck() const{
+    using namespace Hurricane;
 
+    Graph::selfcheck();
+
+    for(EdgeIndex e=0; e<edges.size(); ++e){
+        if(isTurnEdge(e) + isHorizontalEdge(e) + isVerticalEdge(e) != 1)
+            throw Error("Edge is not unidirectional\n");
+        PlanarCoord c1 = getCoord(edges[e].vertices[0]),
+                    c2 = getCoord(edges[e].vertices[1]);
+        if(isTurnEdge(e)){
+            if(c1 != c2)
+                throw Error("Turn edge %d is between (%d, %d) and (%d, %d)\n", e, c1.x, c1.y, c2.x, c2.y);
+        }
+        if(isHorizontalEdge(e)){
+            if(c1.x != c2.x)
+                throw Error("Horizontal edge %d is between (%d, %d) and (%d, %d)\n", e, c1.x, c1.y, c2.x, c2.y);
+        }
+        if(isVerticalEdge(e)){
+            if(c1.y != c2.y)
+                throw Error("Horizontal edge %d is between (%d, %d) and (%d, %d)\n", e, c1.x, c1.y, c2.x, c2.y);
+        }
+    }
+}
 
 
 } // End namespace spaghetti

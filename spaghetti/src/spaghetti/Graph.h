@@ -71,7 +71,8 @@ class Graph{
     std::vector<Vertex> vertices;
     std::vector<Edge>   edges;
 
-    bool isNetRouted( Net const & n ) const;
+    bool isNetRouted ( Net const & n ) const;
+    bool isNetClean  ( Net const & n ) const;
     std::vector<std::vector<VertexIndex> > getConnectedComponents( Net const & n ) const;
 
     void unrouteNet             ( Net & n );
@@ -124,6 +125,8 @@ class RoutableGraph : public Graph{
 
     void rebiroute    ( EdgePredicate, EdgeCostFunction );
     void retriroute   ( EdgePredicate, EdgeCostFunction );
+
+    void cleanupRouting ();
 
     bool isRouted          ()                const;
     bool isCorrectlyRouted ( EdgePredicate ) const;

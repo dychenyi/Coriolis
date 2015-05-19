@@ -176,7 +176,7 @@ void Graph::unrouteUnusedEdges ( Net & n ){
     // Edges used by the net (could as well use a sorted vector)
     std::unordered_set<EdgeIndex>        routing(n.routing.begin(), n.routing.end());
     // Active set and removed vertex set
-    std::vector<VertexIndex> toProcess, removedVertices;
+    std::vector<VertexIndex> toProcess;
 
     // Increments the counter for the vertex and adds it to the active set
     auto increment = [&](VertexIndex v){
@@ -201,6 +201,7 @@ void Graph::unrouteUnusedEdges ( Net & n ){
         increment(edges[e].vertices[1]);
     }
 
+    std::unordered_set<VertexIndex> removedVertices;
     // If a vertex has only one access, it is an end of line: we can remove it from the map and delete the edges there
     while(not toProcess.empty()){
         VertexIndex v = toProcess.back();
@@ -220,17 +221,16 @@ void Graph::unrouteUnusedEdges ( Net & n ){
                 }
             }
             connectedCounts.erase(source_it); // Won't process it twice
-            removedVertices.push_back(v);
+            removedVertices.emplace(v);
         }
     }
 
     std::vector<EdgeIndex> nextRouting;
     // Create the new routing for the net and update the demands for the graph's edges
-    std::unordered_set<VertexIndex> removedVerticesSet(removedVertices.begin(), removedVertices.end());
     for(EdgeIndex e : n.routing){
         // No incident vertex has been removed
-        if(  removedVerticesSet.count(edges[e].vertices[0]) == 0
-         and removedVerticesSet.count(edges[e].vertices[1]) == 0){
+        if(  removedVertices.count(edges[e].vertices[0]) == 0
+         and removedVertices.count(edges[e].vertices[1]) == 0){
             nextRouting.push_back(e);
         }
         else{
@@ -239,6 +239,35 @@ void Graph::unrouteUnusedEdges ( Net & n ){
     }
     n.routing.swap(nextRouting);
 
+}
+
+// Verify that we have no unused vertex in the net i.e. all edges connect two meaningful things
+bool Graph::isNetClean( Net const & n) const{
+    if(not isNetRouted(n) ) return false;
+
+    std::unordered_set<VertexIndex> components;
+    for(auto const & comp : n.initialComponents)
+        components.insert(comp.begin(), comp.end());
+
+    std::unordered_set<EdgeIndex> const allEdges(n.routing.begin(), n.routing.end());
+
+    auto verifyVertex = [&](VertexIndex v)->bool{
+        if(components.count(v) != 0) return true;
+        int countEdges=0;
+        for(auto neigh : neighbours(v)){
+            if(allEdges.count(neigh.edge) != 0)
+                ++countEdges;
+        }
+        return (countEdges >= 2);
+    };
+
+    bool ret=true;
+    for(EdgeIndex e : n.routing){
+        ret = ret and verifyVertex(edges[e].vertices[0]);
+        ret = ret and verifyVertex(edges[e].vertices[1]);
+    }
+
+    return ret;
 }
 
 // More complex technique: unroute parts of the net that are relatively simple.

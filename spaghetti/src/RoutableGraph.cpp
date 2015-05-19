@@ -42,6 +42,11 @@ void RoutableGraph::retriroute   ( EdgePredicate edgePredicate, EdgeCostFunction
     }
 }
 
+void RoutableGraph::cleanupRouting   () {
+    for(Net & n : nets)
+        unrouteUnusedEdges(n);
+}
+
 bool RoutableGraph::isRouted   () const{
     for(Net const & n : nets)
         if(not isNetRouted(n))

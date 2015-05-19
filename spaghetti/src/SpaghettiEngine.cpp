@@ -271,6 +271,7 @@ void SpaghettiEngine::initGlobalRouting ( const std::map<Hurricane::Name,Hurrica
 void SpaghettiEngine::run ( const std::map<Hurricane::Name,Hurricane::Net*>& excludedNets )
 {
     initGlobalRouting(excludedNets);
+    _routingGrid->selfcheck();
     _routingGrid->steinerRoute(
         basicEdgeCostFunction()
     );
@@ -285,6 +286,8 @@ void SpaghettiEngine::run ( const std::map<Hurricane::Name,Hurricane::Net*>& exc
             //dualthresholdEdgeCostFunction(mul)
             thresholdEdgeCostFunction(mul)
         );
+        _routingGrid->cleanupRouting();
+        _routingGrid->selfcheck();
         cmess2 << "Global routing iteration " << i << std::endl;
         outputStats();
         if(not _routingGrid->isRouted())
@@ -303,13 +306,17 @@ void SpaghettiEngine::saveRoutingSolution () const
     assert(prunedRoutes.size() == _grNets.size());
 
     for(size_t i=0; i<_grNets.size(); ++i){
-      std::unordered_set<VertexIndex> contactPos;
+      //cmess2 << "Handling net: " << _grNets[i] << endl;
+      std::unordered_set<VertexIndex> contactPos, pinPos;
       for(auto const & comp : prunedRoutes[i].components)
-        for(PlanarCoord c : comp)
+        for(PlanarCoord c : comp){
           contactPos.emplace(getRepr(c.x, c.y));
+          pinPos.emplace(getRepr(c.x, c.y));
+        }
       for(auto e : prunedRoutes[i].routing){
         contactPos.emplace(getRepr( e.first.x, e.first.y ));
         contactPos.emplace(getRepr( e.second.x, e.second.y ));
+        //cmess2 << "\tEdge from (" << e.first.x << "," << e.first.y << ") to (" << e.second.x << "," << e.second.y << ")" << endl;
       }
 
       DbU::Unit epsilon = DbU::lambda(2);
@@ -320,11 +327,12 @@ void SpaghettiEngine::saveRoutingSolution () const
         PlanarCoord c = _routingGrid->getCoord(v);
         DbU::Unit contactX = (getVerticalCut(c.x)   + getVerticalCut(c.x+1))/2,
                   contactY = (getHorizontalCut(c.y) + getHorizontalCut(c.y+1))/2;
-        DbU::Unit wX = getVerticalCut(c.x+1)   - getVerticalCut(c.x),
-                  wY = getHorizontalCut(c.y+1) - getHorizontalCut(c.y);
+        DbU::Unit wX = epsilon, //getVerticalCut(c.x+1)   - getVerticalCut(c.x),
+                  wY = epsilon; //getHorizontalCut(c.y+1) - getHorizontalCut(c.y);
+        //cmess2 << "\tContact at (" << c.x << "," << c.y << ") translated to (" << DbU::getValueString(contactX) << "," << DbU::getValueString(contactY) << ")" << endl;
         contacts[v] = Contact::create(
               _grNets[i]
-            , DataBase::getDB()->getTechnology()->getLayer("metal2")
+            , getGContact() //DataBase::getDB()->getTechnology()->getLayer("metal2")
             , contactX
             , contactY
             , wX 
@@ -350,13 +358,23 @@ void SpaghettiEngine::saveRoutingSolution () const
             Horizontal::create ( c2, c1, getGMetalH(), c1->getY(), epsilon );
         else throw Error("The segment is neither horizontal nor vertical\n");
       }
-      // Get the pads associated with each vertex of the grid
-      std::vector<std::pair<VertexIndex, RoutingPad*> > pads;
+
+      // Get the contact associated with each pad
+      std::unordered_set<VertexIndex> pads;
       forEach ( RoutingPad*, ipad, _grNets[i]->getRoutingPads() ) {
-        Point cur = dynamic_cast<RoutingPad*>(*ipad)->getCenter();
-        Contact* c = contacts.at(getRepr(getGridX(cur.getX()), getGridY(cur.getY())));
+        Point cur = ipad->getCenter();
+        //cmess2 << "Routing pad at (" << getGridX(cur.getX()) << ", " << getGridY(cur.getY()) << ") translated from (" << DbU::getValueString(cur.getX()) << "," << DbU::getValueString(cur.getY()) << ")" << endl;
+        VertexIndex repr = getRepr(getGridX(cur.getX()), getGridY(cur.getY()));
+        Contact* c = contacts.at(repr);
+        pads.emplace(repr);
         ipad->getBodyHook()->detach();
         ipad->getBodyHook()->attach(c->getBodyHook());
+      }
+      for(VertexIndex v : pinPos){
+        if(pads.count(v)==0){
+            PlanarCoord c = _routingGrid->getCoord(v);
+            throw Error("Didn't find any pad associated with the component (%d, %d)\n", c.x, c.y);
+        }
       }
     }
 }
@@ -411,6 +429,8 @@ DbU::Unit SpaghettiEngine::getHorizontalCut ( unsigned y ) const
     if(!_routingGrid)
         throw Error("The global routing graph hasn't been initialized yet\n");
     unsigned ydim = _routingGrid->getYDim();
+    if( y > ydim )
+        throw Error("Bigger than the grid's Y dimension\n");
     auto box = getCell()->getBoundingBox();
     return
         ( box.getYMin() * static_cast<std::int64_t>(ydim - y)
@@ -423,6 +443,8 @@ DbU::Unit SpaghettiEngine::getVerticalCut   ( unsigned x ) const
     if(!_routingGrid)
         throw Error("The global routing graph hasn't been initialized yet\n");
     unsigned xdim = _routingGrid->getXDim();
+    if( x > xdim )
+        throw Error("Bigger than the grid's X dimension\n");
     auto box = getCell()->getBoundingBox();
     return
         ( box.getXMin() * static_cast<std::int64_t>(xdim - x)
@@ -436,6 +458,8 @@ unsigned SpaghettiEngine::getGridX ( DbU::Unit x ) const
         throw Error("The global routing graph hasn't been initialized yet\n");
     unsigned xdim = _routingGrid->getXDim();
     auto box = getCell()->getBoundingBox();
+    if( x < box.getXMin() or x >= box.getXMax())
+        throw Error("Not enclosed in the bounding box\n");
     unsigned ret = (( x - box.getXMin() ) * xdim ) / box.getWidth();
     return ret;
 }
@@ -446,6 +470,8 @@ unsigned SpaghettiEngine::getGridY ( DbU::Unit y ) const
         throw Error("The global routing graph hasn't been initialized yet\n");
     unsigned ydim = _routingGrid->getYDim();
     auto box = getCell()->getBoundingBox();
+    if( y < box.getYMin() or y >= box.getYMax())
+        throw Error("Not enclosed in the bounding box\n");
     unsigned ret = (( y - box.getYMin() ) * ydim ) / box.getHeight();
     return ret;
 }

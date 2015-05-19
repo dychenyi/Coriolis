@@ -86,7 +86,7 @@ class BidimensionalGrid : public RoutableGraph{
 
     VertexIndex getVertexRepr( unsigned x, unsigned y ) const { return getHorizontalVertexIndex(x, y); }
     VertexIndex getVertexRepr( PlanarCoord c )          const { return getVertexRepr(c.x, c.y); }
-    VertexIndex getVertexRepr( VertexIndex v )          const { return v > xdim*ydim ? v - xdim*ydim : v; }
+    VertexIndex getVertexRepr( VertexIndex v )          const { return v >= xdim*ydim ? v - xdim*ydim : v; }
     GridCoord   getCoord     ( VertexIndex v )          const;
 
     Cost avgHCost            ( EdgeEvalFunction ) const;
@@ -99,6 +99,7 @@ class BidimensionalGrid : public RoutableGraph{
     Cost maxTCost            ( EdgeEvalFunction ) const;
     Cost qAvgTCost           ( EdgeEvalFunction ) const;
 
+    void selfcheck() const;
 };
 
 class MultilayerGrid : public RoutableGraph{
