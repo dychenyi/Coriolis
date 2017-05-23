@@ -169,6 +169,23 @@ namespace {
     return Transformation( tx, ty, orient );
   }
 
+  DbU::Unit computeStandardCellHeight (Cell *ownerCell )
+  {
+    DbU::Unit height = 0;
+    for ( Occurrence occurrence : ownerCell->getLeafInstanceOccurrences() )
+    {
+      Instance* instance     = static_cast<Instance*>(occurrence.getEntity());
+      if (instance->isFixed() || not instance->isTerminal())
+        continue;
+
+      Cell*     masterCell   = instance->getMasterCell();
+      DbU::Unit cellHeight = masterCell->getAbutmentBox().getHeight();
+      height = std::max(height, cellHeight);
+    }
+
+    return height;
+  }
+
 } // Anonymous namespace.
 
 
@@ -313,6 +330,8 @@ namespace Etesian {
   Configuration* EtesianEngine::getConfiguration ()
   { return _configuration; }
 
+  DbU::Unit EtesianEngine::getSliceHeight   () const
+  { return computeStandardCellHeight(getCell()); }
 
   void  EtesianEngine::startMeasures ()
   {
@@ -751,6 +770,15 @@ namespace Etesian {
     using namespace coloquinte::dp;
 
     int_t sliceHeight = getSliceHeight() / getPitch();
+    int_t gaugeSliceHeight = getCellGauge()->getSliceHeight() / getPitch();
+    if (sliceHeight != gaugeSliceHeight) {
+      stringstream s;
+      s << "Maximum slice height of the design " << sliceHeight;
+      s << " is inconsistent with the library's " << gaugeSliceHeight;
+      s << endl;
+      cerr << Warning(s.str()) << endl;
+    }
+
     roughLegalize(sliceHeight, options);
 
     for ( int i=0; i<iterations; ++i ){

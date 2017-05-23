@@ -188,7 +188,7 @@ namespace CRL {
 
       Instance* instance = Instance::create( cell, node->getName(), master );
       instance->setTransformation( toTransformation(node) );
-      if (node->isFixed())
+      if (node->isFixed() || node->isTerminal())
         instance->setPlacementStatus( Instance::PlacementStatus::FIXED );
 
       for ( auto ipin : node->getPins() ) {

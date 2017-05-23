@@ -272,7 +272,7 @@ std::vector<cell_leg_properties> good_legalize(
             }
             else{
                 // If it is a fixed cell, we use fixed locations
-                throw std::runtime_error("I don't handle fucking macros\n");
+                throw std::runtime_error("Macros are not handled; please check that all placeable cells have standard-cell pitch\n");
             }
         };
 
@@ -330,7 +330,7 @@ std::vector<cell_leg_properties> good_legalize(
                 }
             }
             else{
-                throw std::runtime_error("I don't handle fucking macros\n");
+                throw std::runtime_error("Macros are not handled; please check that all placeable cells have standard-cell pitch\n");
             }
         }
     }
