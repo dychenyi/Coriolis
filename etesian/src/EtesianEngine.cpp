@@ -274,22 +274,19 @@ namespace Etesian {
     , _idsToInsts   ()
     , _viewer       (NULL)
     , _feedCells    (this)
+    , _sliceHeight  (0)
   {
   }
 
 
   void  EtesianEngine::_postCreate ()
   {
-  // Ugly: Name based detection of ISPD benchmarks.
-    if (getString(getCell()->getName()).substr(0,7) == "bigblue") {
-      cmess2 << "  o  ISPD benchmark <" << getCell()->getName()
-             << ">, no feed cells will be added." << endl;
-    } else {
+    _sliceHeight = computeStandardCellHeight(getCell());
+
     // Ugly: Direct uses of Alliance Framework.
     // Must change toward something in the settings.
-      _feedCells.useFeed( AllianceFramework::get()->getCell("tie_x0"   ,Catalog::State::Views) );
-      _feedCells.useFeed( AllianceFramework::get()->getCell("rowend_x0",Catalog::State::Views) );
-    }
+    _feedCells.useFeed( AllianceFramework::get()->getCell("tie_x0"   ,Catalog::State::Views) );
+    _feedCells.useFeed( AllianceFramework::get()->getCell("rowend_x0",Catalog::State::Views) );
   }
 
 
@@ -329,9 +326,6 @@ namespace Etesian {
 
   Configuration* EtesianEngine::getConfiguration ()
   { return _configuration; }
-
-  DbU::Unit EtesianEngine::getSliceHeight   () const
-  { return computeStandardCellHeight(getCell()); }
 
   void  EtesianEngine::startMeasures ()
   {

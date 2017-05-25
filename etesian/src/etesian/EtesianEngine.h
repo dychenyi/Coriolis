@@ -62,7 +62,7 @@ namespace Etesian {
       virtual const Name&            getName          () const;
       inline  CellGauge*             getCellGauge     () const;
       inline  DbU::Unit              getPitch         () const;
-              DbU::Unit              getSliceHeight   () const;
+      inline  DbU::Unit              getSliceHeight   () const;
       inline  Effort                 getPlaceEffort   () const;
       inline  GraphicUpdate          getUpdateConf    () const;
       inline  Density                getSpreadingConf () const;
@@ -115,6 +115,7 @@ namespace Etesian {
              Hurricane::CellViewer*                   _viewer;
              FeedCells                                _feedCells;
              size_t                                   _yspinSlice0;
+             DbU::Unit                                _sliceHeight;
 
     protected:
     // Constructors & Destructors.
@@ -137,6 +138,7 @@ namespace Etesian {
   inline  Hurricane::CellViewer* EtesianEngine::getViewer        () const { return _viewer; }
   inline  CellGauge*             EtesianEngine::getCellGauge     () const { return getConfiguration()->getCellGauge(); }
   inline  DbU::Unit              EtesianEngine::getPitch         () const { return getCellGauge()->getPitch(); }
+  inline  DbU::Unit              EtesianEngine::getSliceHeight   () const { return _sliceHeight; }
   inline  Effort                 EtesianEngine::getPlaceEffort   () const { return getConfiguration()->getPlaceEffort(); }
   inline  GraphicUpdate          EtesianEngine::getUpdateConf    () const { return getConfiguration()->getUpdateConf(); }
   inline  Density                EtesianEngine::getSpreadingConf () const { return getConfiguration()->getSpreadingConf(); }

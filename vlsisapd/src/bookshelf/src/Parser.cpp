@@ -213,6 +213,7 @@ namespace Bookshelf {
         symmetryTokens = false;
       }
       if ( _keywordCompare("terminal",_tokens[itoken]) == 0 ) { terminal = true; continue; }
+      if ( _keywordCompare("terminal_NI",_tokens[itoken]) == 0 ) { terminal = true; continue; }
       if ( _keywordCompare(":"       ,_tokens[itoken]) == 0 ) { symmetryTokens = true; continue; }
 
     //std::cerr << " <X Y>" << std::endl;
@@ -547,6 +548,7 @@ namespace Bookshelf {
       if ( orientationToken ) {
         if (itoken+1 < _tokens.size()) {
           if ( _keywordCompare("/FIXED",_tokens[itoken+1]) == 0 ) flags |= Node::Fixed;
+          if ( _keywordCompare("/FIXED_NI",_tokens[itoken+1]) == 0 ) flags |= Node::Fixed;
         }
 
         if ( _keywordCompare("N" ,_tokens[itoken]) == 0 ) { orientation |= Orientation::N; continue; }
