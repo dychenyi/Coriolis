@@ -43,10 +43,6 @@ class netlist{
     std::vector<point<int_t> > cell_sizes_;
     std::vector<mask_t>        cell_attributes_;
 
-    // Mapping of the order given at construction time to the internal representation
-    std::vector<index_t>       cell_internal_mapping_;
-    std::vector<index_t>       net_internal_mapping_;
-
     // Optimized sparse storage for nets
     std::vector<index_t>         net_limits_;
     std::vector<index_t>         cell_indexes_;
@@ -152,13 +148,9 @@ class netlist{
         return internal_net(ind, *this);
     }
 
-    index_t cell_cnt() const{ return cell_internal_mapping_.size(); }
-    index_t net_cnt()  const{ return net_internal_mapping_.size(); }
+    index_t cell_cnt() const{ return cell_areas_.size(); }
+    index_t net_cnt()  const{ return net_weights_.size(); }
     index_t pin_cnt()  const{ return pin_offsets_.size(); }
-
-    index_t get_cell_ind(index_t external_ind) const{ return cell_internal_mapping_[external_ind]; }
-    index_t get_net_ind(index_t external_ind) const{ return net_internal_mapping_[external_ind]; }
-
 };
 
 inline netlist::netlist(std::vector<temporary_cell> cells, std::vector<temporary_net> nets, std::vector<temporary_pin> all_pins){
@@ -180,20 +172,10 @@ inline netlist::netlist(std::vector<temporary_cell> cells, std::vector<temporary
     cell_sizes_.resize(cells.size());
     cell_attributes_.resize(cells.size());
 
-    cell_internal_mapping_.resize(cells.size());
-    net_internal_mapping_.resize(nets.size());
-
     cell_indexes_.resize(pins.size());
     pin_offsets_.resize(pins.size());
     net_indexes_.resize(pins.size());
     pin_indexes_.resize(pins.size());
-
-    for(index_t i=0; i<nets.size(); ++i){
-        net_internal_mapping_[i] = i;
-    }
-    for(index_t i=0; i<cells.size(); ++i){
-        cell_internal_mapping_[i] = i;
-    }
 
     std::sort(pins.begin(), pins.end(), [](extended_pin const a, extended_pin const b){ return a.net_ind < b.net_ind; });
     for(index_t n=0, p=0; n<nets.size(); ++n){
