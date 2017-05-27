@@ -618,86 +618,86 @@ void region_distribution::redo_multipartitions(index_t x_width, index_t y_width)
 }
 
 inline void region_distribution::region::distribute_new_cells(std::vector<std::reference_wrapper<region> > regions, std::vector<cell_ref> cells, std::function<float_t (point<float_t>)> coord){
-	// Gather all cells and the useful regions
-	std::vector<std::reference_wrapper<region> > all_regions;
+    // Gather all cells and the useful regions
+    std::vector<std::reference_wrapper<region> > all_regions;
 
-	for(region & reg_ref : regions){
-		if(reg_ref.capacity() > 0){
-			cells.insert(cells.end(), reg_ref.cell_references_.begin(), reg_ref.cell_references_.end());
-			reg_ref.cell_references_.clear();
-			all_regions.push_back(std::reference_wrapper<region>(reg_ref));
-		}
-		else{
-			assert(reg_ref.cell_references_.empty());
-		}
-	}
+    for(region & reg_ref : regions){
+        if(reg_ref.capacity() > 0){
+            cells.insert(cells.end(), reg_ref.cell_references_.begin(), reg_ref.cell_references_.end());
+            reg_ref.cell_references_.clear();
+            all_regions.push_back(std::reference_wrapper<region>(reg_ref));
+        }
+        else{
+            assert(reg_ref.cell_references_.empty());
+        }
+    }
 
-	// Sort the regions by coordinate
-	std::sort(all_regions.begin(), all_regions.end(), [&](std::reference_wrapper<region> const a, std::reference_wrapper<region> const b){ return coord(a.get().pos_) < coord(b.get().pos_); });
-	// And the cells
-	std::sort(cells.begin(), cells.end(), [&](cell_ref const a, cell_ref const b){ return coord(a.pos_) < coord(b.pos_); });
-	just_uniquify(cells);
+    // Sort the regions by coordinate
+    std::sort(all_regions.begin(), all_regions.end(), [&](std::reference_wrapper<region> const a, std::reference_wrapper<region> const b){ return coord(a.get().pos_) < coord(b.get().pos_); });
+    // And the cells
+    std::sort(cells.begin(), cells.end(), [&](cell_ref const a, cell_ref const b){ return coord(a.pos_) < coord(b.pos_); });
+    just_uniquify(cells);
 
-	std::vector<t1D_elt> sources, sinks;
-        sources.reserve(cells.size());
-	for(cell_ref const c : cells){
-		sources.push_back(t1D_elt(static_cast<int_t>(coord(c.pos_)), c.allocated_capacity_));
-	}
-        sinks.reserve(all_regions.size());
-	for(region & reg_ref : all_regions){
-		sinks.push_back(t1D_elt(static_cast<int_t>(coord(reg_ref.pos_)), reg_ref.capacity()));
-	}
+    std::vector<t1D_elt> sources, sinks;
+    sources.reserve(cells.size());
+    for(cell_ref const c : cells){
+        sources.push_back(t1D_elt(static_cast<int_t>(coord(c.pos_)), c.allocated_capacity_));
+    }
+    sinks.reserve(all_regions.size());
+    for(region & reg_ref : all_regions){
+        sinks.push_back(t1D_elt(static_cast<int_t>(coord(reg_ref.pos_)), reg_ref.capacity()));
+    }
 
-	std::vector<capacity_t> const positions = transport_1D(sources, sinks);
+    std::vector<capacity_t> const positions = transport_1D(sources, sinks);
 
-	std::vector<capacity_t> prev_cap(1, 0);
-        prev_cap.reserve(sinks.size()+1);
-	for(t1D_elt e: sinks){
-		assert(e.second > 0);
-		prev_cap.push_back(prev_cap.back() + e.second);
-	}
+    std::vector<capacity_t> prev_cap(1, 0);
+    prev_cap.reserve(sinks.size()+1);
+    for(t1D_elt e: sinks){
+        assert(e.second > 0);
+        prev_cap.push_back(prev_cap.back() + e.second);
+    }
 
-	for(index_t i=0; i<sources.size(); ++i){
-		assert(positions[i] + sources[i].second <= prev_cap.back());
-		assert(positions[i] >= 0);
-		assert(sources[i].second > 0);
-		if(i>0)
-			assert(sources[i-1].second + positions[i-1] <= positions[i]);
-	}
+    for(index_t i=0; i<sources.size(); ++i){
+        assert(positions[i] + sources[i].second <= prev_cap.back());
+        assert(positions[i] >= 0);
+        assert(sources[i].second > 0);
+        if(i>0)
+            assert(sources[i-1].second + positions[i-1] <= positions[i]);
+    }
 
-	for(index_t i=0, r=0; i<sources.size(); ++i){
-		cell_ref const c = cells[i];
+    for(index_t i=0, r=0; i<sources.size(); ++i){
+        cell_ref const c = cells[i];
 
-		capacity_t cur_pos = positions[i];
-		capacity_t cur_cap = sources[i].second;
-		while(cur_cap > 0){
-			while(prev_cap[r+1] <= cur_pos){ // After the end of region r
-				++r;
-			}
-			cell_ref new_c = c;
-			capacity_t used_cap = std::min(prev_cap[r+1] - cur_pos, cur_cap);
-			new_c.allocated_capacity_ = used_cap;
-			assert(used_cap >= 0);
-			if(used_cap > 0){
-				all_regions[r].get().cell_references_.push_back(new_c);
-			}
-			cur_pos += used_cap;
-			cur_cap -= used_cap;
-		}
-	}
+        capacity_t cur_pos = positions[i];
+        capacity_t cur_cap = sources[i].second;
+        while(cur_cap > 0){
+            while(prev_cap[r+1] <= cur_pos){ // After the end of region r
+                ++r;
+            }
+            cell_ref new_c = c;
+            capacity_t used_cap = std::min(prev_cap[r+1] - cur_pos, cur_cap);
+            new_c.allocated_capacity_ = used_cap;
+            assert(used_cap >= 0);
+            if(used_cap > 0){
+                all_regions[r].get().cell_references_.push_back(new_c);
+            }
+            cur_pos += used_cap;
+            cur_cap -= used_cap;
+        }
+    }
 }
 
 inline void region_distribution::region::redistribute_cells(std::vector<std::reference_wrapper<region> > & regions, std::function<float_t (point<float_t>)> coord){
     std::vector<cell_ref> cells;
-	for(region & reg_ref : regions){
-		if(reg_ref.capacity() > 0){
-			cells.insert(cells.end(), reg_ref.cell_references_.begin(), reg_ref.cell_references_.end());
-			reg_ref.cell_references_.clear();
-		}
-		else{
-			assert(reg_ref.cell_references_.empty());
-		}
-	}
+    for(region & reg_ref : regions){
+        if(reg_ref.capacity() > 0){
+            cells.insert(cells.end(), reg_ref.cell_references_.begin(), reg_ref.cell_references_.end());
+            reg_ref.cell_references_.clear();
+        }
+        else{
+            assert(reg_ref.cell_references_.empty());
+        }
+    }
     distribute_new_cells(regions, cells, coord);
 }
 
