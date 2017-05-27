@@ -255,6 +255,9 @@ inline float_t region_distribution::region::distance(region_distribution::cell_r
     */
 }
 
+// Main API
+region_distribution get_rough_legalizer(netlist const & circuit, placement_t const & pl, box<int_t> surface);
+void get_rough_legalization(netlist const & circuit, placement_t & pl, region_distribution const & legalizer);
 
 } // Namespace gp
 } // Namespace coloquinte

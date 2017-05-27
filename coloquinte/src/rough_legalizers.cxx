@@ -334,6 +334,7 @@ void region_distribution::region::distribute_new_cells(region & region_a, region
     };
 
     std::vector<cost_diff_cell> cells;
+    cells.reserve(basic_cells.size());
     for(cell_ref const c : basic_cells){
         cells.push_back(cost_diff_cell(c, region_a.distance(c) - region_b.distance(c)));
     }
@@ -431,6 +432,7 @@ void region_distribution::region::redistribute_cells(region & Ra, region & Rb){
 
 void region_distribution::region::distribute_new_cells(std::vector<std::reference_wrapper<region_distribution::region> > regions, std::vector<cell_ref> all_cells){
     std::vector<capacity_t> caps;
+    caps.reserve(regions.size());
     for(region_distribution::region & R : regions){
         caps.push_back(R.capacity_);
         R.cell_references_.clear();
@@ -637,9 +639,11 @@ inline void region_distribution::region::distribute_new_cells(std::vector<std::r
 	just_uniquify(cells);
 
 	std::vector<t1D_elt> sources, sinks;
+        sources.reserve(cells.size());
 	for(cell_ref const c : cells){
 		sources.push_back(t1D_elt(static_cast<int_t>(coord(c.pos_)), c.allocated_capacity_));
 	}
+        sinks.reserve(all_regions.size());
 	for(region & reg_ref : all_regions){
 		sinks.push_back(t1D_elt(static_cast<int_t>(coord(reg_ref.pos_)), reg_ref.capacity()));
 	}
@@ -647,6 +651,7 @@ inline void region_distribution::region::distribute_new_cells(std::vector<std::r
 	std::vector<capacity_t> const positions = transport_1D(sources, sinks);
 
 	std::vector<capacity_t> prev_cap(1, 0);
+        prev_cap.reserve(sinks.size()+1);
 	for(t1D_elt e: sinks){
 		assert(e.second > 0);
 		prev_cap.push_back(prev_cap.back() + e.second);
@@ -1069,6 +1074,17 @@ float_t region_distribution::cost() const{
     }
     // Average over the cells' areas
     return res / static_cast<float_t>(tot_cap);
+}
+
+region_distribution get_rough_legalizer(netlist const & circuit, placement_t const & pl, box<int_t> surface){
+    return region_distribution::uniform_density_distribution(surface, circuit, pl);
+}
+
+void get_rough_legalization(netlist const & circuit, placement_t & pl, region_distribution const & legalizer){
+    auto exportation = legalizer.export_spread_positions_linear();
+    for(auto const C : exportation){
+        pl.positions_[C.index_in_placement_] = static_cast<point<int_t> >(C.pos_ - 0.5f * static_cast<point<float_t> >(circuit.get_cell(C.index_in_placement_).size));
+    }
 }
 
 } // Namespace gp

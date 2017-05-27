@@ -41,10 +41,6 @@ std::int64_t get_RSMT_wirelength (netlist const & circuit, placement_t const & p
 float_t get_mean_linear_disruption(netlist const & circuit, placement_t const & LB_pl, placement_t const & UB_pl);
 float_t get_mean_quadratic_disruption(netlist const & circuit, placement_t const & LB_pl, placement_t const & UB_pl);
 
-// Legalizer-related stuff
-region_distribution get_rough_legalizer(netlist const & circuit, placement_t const & pl, box<int_t> surface);
-void get_rough_legalization(netlist const & circuit, placement_t & pl, region_distribution const & legalizer);
-
 // Cell orientation optimization
 void optimize_x_orientations(netlist const & circuit, placement_t & pl);
 void optimize_y_orientations(netlist const & circuit, placement_t & pl);

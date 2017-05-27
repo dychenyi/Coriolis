@@ -87,41 +87,6 @@ namespace {
     return name.str();
   }
 
-
-  string  extractPinName ( const RoutingPad* rp )
-  {
-    ostringstream name;
-
-    Occurrence occurrence = rp->getOccurrence();
-
-    name << getString(occurrence.getOwnerCell()->getName()) << ':';
-
-    if (not rp->getOccurrence().getPath().isEmpty())
-      name << getString(rp->getOccurrence().getPath().getName()) << ":";
-
-    name << "T." << getString(rp->_getEntityAsComponent()->getNet()->getName());
-
-    return name.str();
-  }
-
-
-  string  extractTerminalName ( const RoutingPad* rp )
-  {
-    ostringstream name;
-
-    Occurrence occurrence = rp->getOccurrence();
-
-    name << getString(occurrence.getOwnerCell()->getName()) << ':';
-
-    if (not rp->getOccurrence().getPath().isEmpty())
-      name << getString(rp->getOccurrence().getPath().getName()) << ":";
-
-    name << "T." << getString(rp->_getEntityAsComponent()->getNet()->getName());
-
-    return name.str();
-  }
-
-
   Point  extractRpOffset ( const RoutingPad* rp )
   {
     Cell*      masterCell = rp->getOccurrence().getMasterCell();
@@ -633,7 +598,7 @@ namespace Etesian {
       legalizer.x_bipartition();
     while(2*legalizer.region_dimensions().x < legalizer.region_dimensions().y)
       legalizer.y_bipartition();
-    while( std::max(legalizer.region_dimensions().x, legalizer.region_dimensions().y)*4 > minDisruption ) {
+    while( std::max(legalizer.region_dimensions().x, legalizer.region_dimensions().y) > minDisruption ) {
       legalizer.x_bipartition();
       legalizer.y_bipartition();
       legalizer.redo_line_partitions();
@@ -702,7 +667,7 @@ namespace Etesian {
 
     index_t i=0;
     do{
-      roughLegalize(minDisruption, options);
+      roughLegalize(minDisruption * 0.25, options);
       if(options & UpdateUB)
         _updatePlacement( _placementUB );
 
@@ -756,6 +721,7 @@ namespace Etesian {
       // First way to exit the loop: UB and LB difference is <10%
       // Second way to exit the loop: the legalization is close enough to the previous result
     } while (linearDisruption > minDisruption and prevOptRatio <= 0.9);
+    roughLegalize(minDisruption, options);
     _updatePlacement( _placementUB );
   }
 
@@ -772,8 +738,6 @@ namespace Etesian {
       s << endl;
       cerr << Warning(s.str()) << endl;
     }
-
-    roughLegalize(sliceHeight, options);
 
     for ( int i=0; i<iterations; ++i ){
         ostringstream label;

@@ -357,17 +357,6 @@ point<linear_system> get_linear_pulling_forces (netlist const & circuit, placeme
     return L;
 }
 
-region_distribution get_rough_legalizer(netlist const & circuit, placement_t const & pl, box<int_t> surface){
-    return region_distribution::uniform_density_distribution(surface, circuit, pl);
-}
-
-void get_rough_legalization(netlist const & circuit, placement_t & pl, region_distribution const & legalizer){
-    auto exportation = legalizer.export_spread_positions_linear();
-    for(auto const C : exportation){
-        pl.positions_[C.index_in_placement_] = static_cast<point<int_t> >(C.pos_ - 0.5f * static_cast<point<float_t> >(circuit.get_cell(C.index_in_placement_).size));
-    }
-}
-
 float_t get_mean_linear_disruption(netlist const & circuit, placement_t const & LB_pl, placement_t const & UB_pl){
     float_t tot_cost = 0.0;
     float_t tot_area = 0.0;
