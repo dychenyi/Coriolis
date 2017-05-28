@@ -22,9 +22,15 @@ std::vector<capacity_t>  transport_1D(std::vector<t1D_elt> sources, std::vector<
         bool operator<(bound const o) const{ return pos < o.pos; }
     };
 
-    std::priority_queue<bound> bounds;
+    // Reserve space here
+    std::vector<bound> boundContainer;
+    boundContainer.reserve(sources.size());
+    std::priority_queue<bound> bounds(std::less<bound>(), std::move(boundContainer));
     std::vector<capacity_t> constraining_pos;
     std::vector<capacity_t> prev_cap(1, 0), prev_dem(1, 0);
+    constraining_pos.reserve(sources.size());
+    prev_cap.reserve(sinks.size()+1);
+    prev_dem.reserve(sources.size()+1);
     for(auto const s : sinks){
         prev_cap.push_back(s.second + prev_cap.back());
     }
