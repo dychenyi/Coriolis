@@ -19,7 +19,7 @@ BOOST_PYTHON_MODULE(AGDS) {
     ;
 
     // class AGDS::Structure
-    class_<Structure>("Structure", init<std::string>())
+    class_<Structure, boost::noncopyable>("Structure", init<std::string>())
         .def("addElement", &Structure::addElement )
         .def("getName"   , &Structure::getName    )
     ;

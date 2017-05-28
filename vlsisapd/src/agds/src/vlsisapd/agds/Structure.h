@@ -4,6 +4,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <memory>
 
 namespace AGDS {
 class Element;
@@ -20,7 +21,7 @@ class Structure {
     private:
         std::string _strName;
 
-        std::vector<Element*> _elements;
+        std::vector<std::unique_ptr<Element> > _elements;
 };
 
 inline std::string Structure::getName() { return _strName; };

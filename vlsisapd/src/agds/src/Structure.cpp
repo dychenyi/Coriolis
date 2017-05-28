@@ -12,7 +12,7 @@ Structure::Structure(string strName)
 
 bool Structure::addElement(Element* gdsElement) {
     if(gdsElement)
-        _elements.push_back(gdsElement);
+        _elements.emplace_back(gdsElement);
     else {
         cerr << "[GDS DRIVE ERROR]: cannot hold Element." << endl;
         return false;
@@ -36,8 +36,8 @@ bool Structure::write(ofstream &file) {
          << endl;
 
     // For each Element : write element.
-    for ( vector<Element*>::iterator it = _elements.begin() ; it < _elements.end() ; it++ ) {
-        (*it)->write(file);
+    for ( auto & elt : _elements ) {
+        elt->write(file);
     }
 
     // Footer
