@@ -81,6 +81,7 @@ namespace Unicorn {
     _formatComboBox->addItem ( tr("JSON (experimental)")   , Json        );
     _formatComboBox->addItem ( tr("Alliance compliant DEF"), AllianceDef );
     _formatComboBox->addItem ( tr("ASCII/GDSII (AGDS)")    , AsciiGds    );
+    _formatComboBox->addItem ( tr("GDSII")                 , Gds    );
     hLayout2->addWidget ( _formatComboBox );
 
     QVBoxLayout* vLayout = new QVBoxLayout ();

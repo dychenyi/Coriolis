@@ -29,7 +29,8 @@ BOOST_PYTHON_MODULE(AGDS) {
         .def("setUserUnits", &Library::setUserUnits)
         .def("setPhysUnits", &Library::setPhysUnits)
         .def("addStructure", &Library::addStructure)
-        .def("writeToFile" , &Library::writeToFile )
+        .def("writeAGDS" , &Library::writeAGDS )
+        .def("writeGDS" , &Library::writeGDS )
     ;
 }
 } // namespace

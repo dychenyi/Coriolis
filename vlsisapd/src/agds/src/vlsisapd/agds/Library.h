@@ -14,7 +14,8 @@ class Library {
         inline void setPhysUnits ( double physUnits );
 
         bool addStructure ( Structure* );
-        bool writeToFile  ( std::string fileName );
+        bool writeGDS  ( std::string fileName );
+        bool writeAGDS ( std::string fileName );
 
     private:
         std::string _libName;

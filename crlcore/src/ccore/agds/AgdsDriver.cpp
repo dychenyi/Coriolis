@@ -136,19 +136,20 @@ namespace {
 
 namespace CRL {
 
-
+  // TODO: refactor to read the names and units or remove them from the signature
   void agdsDriver ( const string filePath
                   , Cell*        cell
                   , string&      name
                   , string&      lib
                   , double&      uUnits
                   , double&      pUnits
+                  , bool gds
                   )
   {
     name = getString(cell->getName());
     replace(name.begin(), name.end(), ' ', '_');
 
-    lib = getString(cell->getLibrary()->getName());
+    lib = getString(cell->getLibrary()->getName()) + ".DB";
     replace(lib.begin(), lib.end(), ' ', '_');
 
     uUnits = 0.001;
@@ -168,7 +169,10 @@ namespace CRL {
     }
 
     gdsLib->addStructure( str );
-    gdsLib->writeToFile ( filePath );
+    if (gds)
+      gdsLib->writeGDS    ( filePath );
+    else
+      gdsLib->writeAGDS   ( filePath );
   }
 
 

@@ -30,11 +30,13 @@ namespace CRL {
   class GdsDriver {
     public:
                          GdsDriver ( Hurricane::Cell* );
-             bool        save      ( const std::string& filePath );
+             bool        saveGDS   ( const std::string& filePath );
+             bool        saveAGDS  ( const std::string& filePath );
       inline std::string getName   ();
       inline std::string getLib    ();
       inline double      getUUnits ();
       inline double      getPUnits ();
+
     private:
       Hurricane::Cell* _cell;
       std::string      _name;

@@ -8,14 +8,15 @@
 namespace AGDS {
 class Rectangle : public Element {
     public:
-                      Rectangle (int layer, double xmin, double ymin, double xmax, double ymax);
-        virtual      ~Rectangle ();
-        virtual bool  write(std::ofstream &file);
+        Rectangle (int layer, int xmin, int ymin, int xmax, int ymax);
+        void  writeAGDS (std::ofstream &file);
+        void  writeGDS  (std::ofstream &file);
+
     private:
-        double _xmin;
-        double _ymin;
-        double _xmax;
-        double _ymax;
+        int _xmin;
+        int _ymin;
+        int _xmax;
+        int _ymax;
 };
 }
 #endif

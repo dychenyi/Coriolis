@@ -8,7 +8,8 @@ class Element {
 
     public:
         virtual ~Element ();
-        virtual bool write (std::ofstream &file) = 0;
+        virtual void writeAGDS (std::ofstream &file) = 0;
+        virtual void writeGDS  (std::ofstream &file) = 0;
 
     protected:
         int _layer;

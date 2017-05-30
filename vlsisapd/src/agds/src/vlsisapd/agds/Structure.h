@@ -14,7 +14,8 @@ class Structure {
         Structure(std::string strName);
 
         bool addElement ( Element* );
-        bool write ( std::ofstream &file );
+        void writeAGDS ( std::ofstream &file );
+        void writeGDS  ( std::ofstream &file );
         
         inline std::string getName();
 

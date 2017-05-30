@@ -290,7 +290,12 @@ namespace Unicorn {
           break;
         case ExportCellDialog::AsciiGds:
           { GdsDriver gdsDriver ( cell );
-            gdsDriver.save( getString(cell->getName())+".agds" );
+            gdsDriver.saveAGDS( getString(cell->getName())+".agds" );
+          }
+          break;
+        case ExportCellDialog::Gds:
+          { GdsDriver gdsDriver ( cell );
+            gdsDriver.saveGDS( getString(cell->getName())+".gds" );
           }
           break;
         case ExportCellDialog::Json:

@@ -8,6 +8,7 @@ SET ( hpps vlsisapd/agds/Library.h
 SET ( cpps Library.cpp 
            Structure.cpp 
            Rectangle.cpp 
+           GdsUtils.cpp
     )
 SET ( pycpps PyAgds.cpp
     )
